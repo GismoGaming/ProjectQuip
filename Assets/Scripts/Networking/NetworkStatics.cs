@@ -61,10 +61,10 @@ namespace Gismo.Networking
     public class NetworkPackets
     {
         // Sent to the server from clients
-        public enum ClientSentPackets { StringSend };
+        public enum ClientSentPackets { MSGSend, ClientPosition};
 
         // Sent to a specific client from the server
-        public enum ServerSentPackets { FirstConnect ,StringSend };
+        public enum ServerSentPackets { FirstConnect ,MSGSend, ClientPositionShare, PlayerDictionaryShare };
 
         /// <summary>
         /// Server Function Dictionary that contains all functions that the server executes upon 
@@ -82,9 +82,9 @@ namespace Gismo.Networking
 
         static bool isInitalized;
 
-        public static void InitalizeFunctions()
+        public static void InitalizeFunctions(bool forced = true)
         {
-            if (isInitalized)
+            if (isInitalized && !forced)
                 return;
 
             ClientFunctions = new Dictionary<ServerSentPackets, ServerPacketRecieved>();

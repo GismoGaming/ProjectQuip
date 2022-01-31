@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
-namespace Gismo.Networking.Server
+using static DL;
+
+namespace Gismo.Networking.Users
 {
+    public delegate void ClientFunction(int id);
+
     public sealed class Server : IDisposable
     {
         private Dictionary<int, Socket> socketLookupTable;
@@ -16,6 +20,9 @@ namespace Gismo.Networking.Server
         public bool serverListening { get; private set; }
 
         public int currentMaxPlayerID { get; private set; }
+
+        public static ClientFunction onServerUp;
+        public static ClientFunction onClientConnected;
 
         public Server(int clientLimit = 0)
         {
@@ -41,7 +48,9 @@ namespace Gismo.Networking.Server
             listenerSocket.Listen(NetworkStatics.maxServerConnections);
             listenerSocket.BeginAccept(new AsyncCallback(DoAcceptClient), 0);
 
-            DL.instance.Log($"Started Server on port {NetworkStatics.portNumberTCP}, with max connections {NetworkStatics.maxServerConnections}");
+            onServerUp?.Invoke(-1);
+
+            Log($"Started Server on port {NetworkStatics.portNumberTCP}, with max connections {NetworkStatics.maxServerConnections}");
         }
 
         public void StopListening()
@@ -63,15 +72,16 @@ namespace Gismo.Networking.Server
         private void DoAcceptClient(IAsyncResult result)
         {
             Socket socket = listenerSocket.EndAccept(result);
+
             int asyncState = (int)result.AsyncState;
             int emptySlot = FindEmptySlot(asyncState);
 
-            DL.instance.Log($"Got new client to add for Player ID of {emptySlot} and async {asyncState}");
-            DL.instance.Log($"Socket Info {socket.RemoteEndPoint} and {socket.LocalEndPoint}");
+            Log($"Got new client to add for Player ID of {emptySlot} and async {asyncState}");
+            Log($"Socket Info R:{socket.RemoteEndPoint} and L:{socket.LocalEndPoint}");
 
             if (clientLimit > 0 && emptySlot > clientLimit)
             {
-                DL.instance.Log($"Out of bounds client number");
+                Log($"Out of bounds client number");
                 socket.Disconnect(false);
                 socket.Dispose();
                 socket = null;
@@ -80,15 +90,30 @@ namespace Gismo.Networking.Server
             socketLookupTable[emptySlot].ReceiveBufferSize = NetworkStatics.bufferSize;
             socketLookupTable[emptySlot].SendBufferSize = NetworkStatics.bufferSize;
 
-            Core.Packet idPacket = new Core.Packet(NetworkPackets.ServerSentPackets.FirstConnect);
-            idPacket.WriteInt(emptySlot);
-
-            SendDataTo(emptySlot, idPacket);
-
             BeginReceiveData(emptySlot);
+
+            Log($"Sending player id packet to {emptySlot}");
+            Core.GismoThreading.ExecuteInNormalUpdate(() =>
+            {
+                Core.Packet idPacket = new Core.Packet(NetworkPackets.ServerSentPackets.FirstConnect);
+                idPacket.WriteInt(emptySlot);
+
+                SendDataTo(emptySlot, idPacket);
+
+                onClientConnected?.Invoke(emptySlot);
+            });
+
             if (!serverListening)
                 return;
             listenerSocket.BeginAccept(new AsyncCallback(DoAcceptClient), asyncState);
+        }
+
+        public bool IsConnected()
+        {
+            if (listenerSocket == null || socketLookupTable == null)
+                return false;
+
+            return true;
         }
 
         private void BeginReceiveData(int index)
@@ -107,7 +132,7 @@ namespace Gismo.Networking.Server
             }
             catch
             {
-                DL.instance.Log($"Player {playerConnection.playerIndex} has error: ConnectionForciblyClosedException");
+                Log($"Player {playerConnection.playerIndex} has error: ConnectionForciblyClosedException");
                 Disconnect(playerConnection.playerIndex);
                 playerConnection.Dispose();
                 return;
@@ -115,15 +140,15 @@ namespace Gismo.Networking.Server
 
             if (!ValidClient(playerConnection.playerIndex))
             {
-                DL.instance.Log($"Player { playerConnection.playerIndex} has error: Socket Error");
+                Log($"Player { playerConnection.playerIndex} has error: Socket Error");
                 playerConnection.Dispose();
 
                 return;
             }
-            
+
             if (socketLength == 0)
             {
-                DL.instance.Log($"Player {playerConnection.playerIndex} has error: No Data was recieved!");
+                Log($"Player {playerConnection.playerIndex} has error: No Data was recieved!");
                 Disconnect(playerConnection.playerIndex);
                 playerConnection.Dispose();
             }
@@ -140,34 +165,46 @@ namespace Gismo.Networking.Server
                     socketLookupTable[playerConnection.playerIndex].BeginReceive(playerConnection.buffers.recieveBuffer, 0, socketLookupTable[playerConnection.playerIndex].ReceiveBufferSize, SocketFlags.None, new AsyncCallback(DoReceive), playerConnection);
                 }
                 catch
-                {}
+                {
+                    Log($"Begin Recieve in Do Recieve has failed for {playerConnection.playerIndex}");
+                }
             }
         }
 
         private void PacketHandler(PlayerConnection connection)
         {
-            DL.instance.Log($"Handling data! from {connection.playerIndex}, {connection.buffers.GetBufferSizes()}");
+            //Log($"Handling data! from {connection.playerIndex}, {connection.buffers.GetBufferSizes()}");
 
             if (connection.buffers.packetRing.Length < 4)
             {
-                DL.instance.Log($"Net ERROR from {connection.playerIndex}: Packet isn't long enough to contain a packet ID");
+                Log($"Net ERROR from {connection.playerIndex}: Packet isn't long enough to contain a packet ID");
                 Disconnect(connection.playerIndex);
                 return;
             }
             else
             {
                 Core.Packet packet = new Core.Packet(connection.buffers.packetRing);
-                NetworkPackets.ClientSentPackets packetID = (NetworkPackets.ClientSentPackets)Enum.ToObject(typeof(NetworkPackets.ClientSentPackets), packet.ReadPacketID());
-                DL.instance.Log($"Got packet of {packetID}");
+
+                NetworkPackets.ClientSentPackets packetID = (NetworkPackets.ClientSentPackets)Enum.ToObject(
+                    typeof(NetworkPackets.ClientSentPackets), 
+                    packet.ReadPacketID()
+                    );
+                //Log($"Got packet of {packetID}");
 
                 if (NetworkPackets.ServerFunctions.ContainsKey(packetID))
                 {
+
                     int cid = packet.ReadInt();
-                    NetworkPackets.ServerFunctions[packetID].Invoke(packet,cid);
+                    Core.GismoThreading.ExecuteInNormalUpdate(() =>
+                    {
+                        NetworkPackets.ServerFunctions[packetID].Invoke(packet, cid);
+
+                        packet.Dispose();
+                    });
                 }
                 else
                 {
-                    DL.instance.Log($"ServerFunctions functions doesn't have an entry for {packetID} for player {connection.playerIndex}");
+                    Log($"ServerFunctions functions doesn't have an entry for {packetID} for player {connection.playerIndex}");
                 }
             }
         }
@@ -220,7 +257,7 @@ namespace Gismo.Networking.Server
             }
             catch
             {
-                DL.instance.Log($"Player {asyncState} has error: ConnectionForciblyClosedException");
+                Log($"Player {asyncState} has error: ConnectionForciblyClosedException");
                 Disconnect(asyncState);
             }
         }
@@ -250,17 +287,17 @@ namespace Gismo.Networking.Server
                 return ((IPEndPoint)socketLookupTable[index].RemoteEndPoint).ToString();
             }
 
-            return "[NULL]";
+            throw new Exception("Client index doesn't exist");
         }
 
-        public void Disconnect(int playerIndex, bool forcedDisconnect = true)
+        public void Disconnect(int playerIndex, bool forcedDisconnect = false)
         {
-            if(forcedDisconnect)
-                DL.instance.Log($"Player {playerIndex} has been forced to disconnect");
-            
+            if (forcedDisconnect)
+                Log($"Player {playerIndex} has been forced to disconnect");
+
             if (!ValidClient(playerIndex))
             {
-                DL.instance.Log($"Player {playerIndex} lookup table and/or socket error");
+                Log($"Player {playerIndex} lookup table and/or socket error");
                 return;
             }
             socketLookupTable[playerIndex].BeginDisconnect(false, new AsyncCallback(DoDisconnect), playerIndex);
@@ -275,7 +312,9 @@ namespace Gismo.Networking.Server
             }
             catch
             {
+                Log($"Do Disconnect failed for {asyncState}");
             }
+
             if (!socketLookupTable.ContainsKey(asyncState))
             {
                 return;
@@ -343,7 +382,7 @@ namespace Gismo.Networking.Server
 
         public void Dispose()
         {
-            DL.instance.Log("Disposing of server");
+            Log("Disposing of server");
             StopListening();
             foreach (int key in socketLookupTable.Keys)
             {

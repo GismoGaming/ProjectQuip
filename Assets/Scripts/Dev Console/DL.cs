@@ -1,6 +1,5 @@
-﻿using Gismo.Networking.Client;
-using Gismo.Networking.Core;
-using Gismo.Networking.Server;
+﻿using Gismo.Networking.Core;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,6 +7,9 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+
+using Gismo.Quip;
+using Gismo.Networking;
 
 
 public class Dev
@@ -36,31 +38,27 @@ public class DL : MonoBehaviour
     [Header("Main Console Stuffs")]
     bool consoleUp = false;
 
-    public TMP_InputField commandInput;
-    public TextMeshProUGUI outputLog;
+    [SerializeField] private TMP_InputField commandInput;
+    [SerializeField] private TextMeshProUGUI outputLog;
 
-    public GameObject mainConsole;
+    [SerializeField] private GameObject mainConsole;
 
-    public ScrollRect rect;
+    [SerializeField] private ScrollRect rect;
 
-    public CommandStack commandStack;
-    public int maxCommandsInStack = 20;
-    public int index;
+    [SerializeField] private CommandStack commandStack;
+    [SerializeField] private int maxCommandsInStack = 20;
+    [SerializeField] private int index;
 
     int screenCaptureSS = 1;
 
-    public delegate void EditorAction(string[] s);
+    [SerializeField] private delegate void EditorAction(string[] s);
 
     Dictionary<List<string>, EditorAction> allEditorActions;
     Dictionary<List<string>, HelpListInformation> allEditorActionHelpDescriptions;
 
-    public ContentSizeFitter fitter;
+    [SerializeField] private ContentSizeFitter fitter;
 
     // Game specific
-
-    // Networking
-    Server selfServer;
-    Client selfClient;
 
     void Awake()
     {
@@ -70,6 +68,25 @@ public class DL : MonoBehaviour
             Destroy(this);
 
         PopulateEditorActions();
+
+        Application.logMessageReceived += (string condition, string stackTrace, LogType type) =>
+        {
+            string msg = $"{condition} | {stackTrace}";
+            switch (type)
+            {
+                case LogType.Assert:
+                    Log(msg, Dev.DebugLogType.italics);
+                    break;
+                case LogType.Error:
+                case LogType.Exception:
+                    Log(msg, Dev.DebugLogType.error);
+                    break;
+                case LogType.Log:
+                default:
+                    Log(msg);
+                    break;
+            }
+        };
     }
 
     void PopulateEditorActions(string[] tags, EditorAction action, string displayName, string description, HelpListDetail detailLevelType = HelpListDetail.min)
@@ -113,15 +130,15 @@ public class DL : MonoBehaviour
         PopulateEditorActions("help", f_help, "Help function", "Help function, use -i for insider only information, -f for all help information, and -d to add descriptions... (Thats what your using now)", HelpListDetail.max);
         PopulateEditorActions("psr", f_palleteSwap, "Random Pallete Swap", "Randomize pallete on object", HelpListDetail.max);
         PopulateEditorActions("netconnect", f_netConnect, "Networking Connection", "Connects to network as either client or server", HelpListDetail.min);
-    
+        PopulateEditorActions("net", f_net, "Networking", "Useful networking commands", HelpListDetail.max);
     }
 
-    public void Log(string msg, Dev.DebugLogType flagType)
+    public void LogMsg(string msg, Dev.DebugLogType flagType)
     {
-        Log(msg, (int)flagType);
+        LogMsg(msg, (int)flagType);
     }
 
-    public void Log(string msg, int flag = 0)
+    public void LogMsg(string msg, int flag = 0)
     {
         if (flag == 1)
         {
@@ -152,15 +169,36 @@ public class DL : MonoBehaviour
         rect.verticalNormalizedPosition = 0f;
     }
 
-    public void Log(string[] msgs, int flag = 0)
+    public void LogMsg(string[] msgs, int flag = 0)
     {
         foreach (string s in msgs)
-            Log(s, flag);
+            LogMsg(s, flag);
     }
 
-    public void Log(string[] msgs, Dev.DebugLogType flagType)
+    public void LogMsg(string[] msgs, Dev.DebugLogType flagType)
     {
-        Log(msgs, (int)flagType);
+        LogMsg(msgs, (int)flagType);
+    }
+
+    public static void Log(string msg, Dev.DebugLogType flagType)
+    {
+        instance.LogMsg(msg, (int)flagType);
+    }
+
+    public static void Log(string msg, int flag = 0)
+    {
+        instance.LogMsg(msg, flag);
+    }
+
+    public static void Log(string[] msgs, int flag = 0)
+    {
+        foreach (string s in msgs)
+            instance.LogMsg(s, flag);
+    }
+
+    public static void Log(string[] msgs, Dev.DebugLogType flagType)
+    {
+        instance.LogMsg(msgs, (int)flagType);
     }
 
     private void Start()
@@ -172,12 +210,12 @@ public class DL : MonoBehaviour
 
     private void StringSentToServer(Packet packet, int playerID)
     {
-        Log($"Got {packet.ReadString()} from player {playerID}");
+        LogMsg($"Got {packet.ReadString()} from player {playerID}");
     }
 
     private void StringSentToClient(Packet packet)
     {
-        Log($"Got {packet.ReadString()} from server");
+        LogMsg($"Got {packet.ReadString()} from server");
     }
 
     void Update()
@@ -233,7 +271,7 @@ public class DL : MonoBehaviour
             }
             string fileLocation = Dev.devFileLocation + "/DevPhotos/" + System.DateTime.Now.Millisecond + ".png";
             ScreenCapture.CaptureScreenshot(fileLocation, screenCaptureSS);
-            Log($"Took picture: {fileLocation}", Dev.DebugLogType.italics);
+            LogMsg($"Took picture: {fileLocation}", Dev.DebugLogType.italics);
         }
     }
 
@@ -257,7 +295,7 @@ public class DL : MonoBehaviour
 
         if (allSectors.Length == 1 && allSectors[0] == "")
         {
-            Log("Please input something!", 1);
+            LogMsg("Please input something!", 1);
             return;
         }
 
@@ -272,7 +310,7 @@ public class DL : MonoBehaviour
             }
         }
 
-        Log("Command " + allSectors[0].Trim() + " not found", 1);
+        LogMsg("Command " + allSectors[0].Trim() + " not found", 1);
     }
 
     #region Commands
@@ -330,7 +368,7 @@ public class DL : MonoBehaviour
                                 allTags += $"{q}, ";
                             }
                             HelpListInformation i = allEditorActionHelpDescriptions[p];
-                            Log($"<sprite=0><color=#add8e6ff><b>{i.displayName}</b></color>: <i>{allTags}</i> \n<color=#00ffffff>{i.description}</color>");
+                            LogMsg($"<sprite=0><color=#add8e6ff><b>{i.displayName}</b></color>: <i>{allTags}</i> \n<color=#00ffffff>{i.description}</color>");
                             return;
                         }
 
@@ -342,7 +380,7 @@ public class DL : MonoBehaviour
                                 allTags += $"{q}, ";
                             }
                             HelpListInformation i = allEditorActionHelpDescriptions[p];
-                            Log($"<sprite=0><color=#add8e6ff><b>{i.displayName}</b></color>: <i>{allTags}</i> \n<color=#00ffffff>{i.description}</color>");
+                            LogMsg($"<sprite=0><color=#add8e6ff><b>{i.displayName}</b></color>: <i>{allTags}</i> \n<color=#00ffffff>{i.description}</color>");
                             return;
                         }
                     }
@@ -360,7 +398,7 @@ public class DL : MonoBehaviour
                     {
                         allTags += $"{q}, ";
                     }
-                    Log($"<sprite=0><color=#add8e6ff><b>{i.displayName}</b></color>: <i>{allTags}</i> \n<color=#00ffffff>{i.description}</color>");
+                    LogMsg($"<sprite=0><color=#add8e6ff><b>{i.displayName}</b></color>: <i>{allTags}</i> \n<color=#00ffffff>{i.description}</color>");
                     continue;
                 }
 
@@ -374,11 +412,11 @@ public class DL : MonoBehaviour
                     }
                     if (addDescriptions)
                     {
-                        Log($"<sprite=0><color=#add8e6ff><b>{i.displayName}</b></color>: <i>{allTags}</i> \n<color=#00ffffff>{i.description}</color>");
+                        LogMsg($"<sprite=0><color=#add8e6ff><b>{i.displayName}</b></color>: <i>{allTags}</i> \n<color=#00ffffff>{i.description}</color>");
                     }
                     else
                     {
-                        Log($"<sprite=0><color=#add8e6ff><b>{i.displayName}</b></color>: <i>{allTags}</i>");
+                        LogMsg($"<sprite=0><color=#add8e6ff><b>{i.displayName}</b></color>: <i>{allTags}</i>");
                     }
                 }
             }
@@ -389,14 +427,14 @@ public class DL : MonoBehaviour
     {
         if (commandStack.ToString().Equals("{[<ERROR>]}"))
         {
-            Log("Nothing to show!", 3);
+            LogMsg("Nothing to show!", 3);
         }
         else
         {
-            Log(commandStack.ToString(), 3);
+            LogMsg(commandStack.ToString(), 3);
         }
     }
-  
+
     void f_setDebugLevel(string[] s)
     {
         try
@@ -405,60 +443,60 @@ public class DL : MonoBehaviour
             {
                 case "off":
                     Dev.debugLevel = Dev.DebugLevel.Off;
-                    Log("Debug level is now set to \"Off\"");
+                    LogMsg("Debug level is now set to \"Off\"");
                     break;
                 case "low":
                     Dev.debugLevel = Dev.DebugLevel.Low;
-                    Log("Debug level is now set to \"Low\"");
+                    LogMsg("Debug level is now set to \"Low\"");
                     break;
                 case "medium":
                     Dev.debugLevel = Dev.DebugLevel.Medium;
-                    Log("Debug level is now set to \"Medium\"");
+                    LogMsg("Debug level is now set to \"Medium\"");
                     break;
                 case "high":
                     Dev.debugLevel = Dev.DebugLevel.High;
-                    Log("Debug level is now set to \"High\"");
+                    LogMsg("Debug level is now set to \"High\"");
                     break;
                 case "o":
                     Dev.debugLevel = Dev.DebugLevel.Off;
-                    Log("Debug level is now set to \"Off\"");
+                    LogMsg("Debug level is now set to \"Off\"");
                     break;
                 case "l":
                     Dev.debugLevel = Dev.DebugLevel.Low;
-                    Log("Debug level is now set to \"Low\"");
+                    LogMsg("Debug level is now set to \"Low\"");
                     break;
                 case "m":
                     Dev.debugLevel = Dev.DebugLevel.Medium;
-                    Log("Debug level is now set to \"Medium\"");
+                    LogMsg("Debug level is now set to \"Medium\"");
                     break;
                 case "h":
                     Dev.debugLevel = Dev.DebugLevel.High;
-                    Log("Debug level is now set to \"High\"");
+                    LogMsg("Debug level is now set to \"High\"");
                     break;
                 default:
-                    Log("Please input proper debug level name", 1);
+                    LogMsg("Please input proper debug level name", 1);
                     break;
             }
         }
         catch
         {
-            Log("Please properly use the command", 1);
+            LogMsg("Please properly use the command", 1);
         }
     }
-    
+
     void f_setScreenCapScale(string[] s)
     {
         try
         {
             screenCaptureSS = int.Parse(s[2]);
-            Log("Seting screen capture scaling to " + screenCaptureSS);
+            LogMsg("Seting screen capture scaling to " + screenCaptureSS);
         }
         catch
         {
-            Log("Invalid integer for screen cap scale", 1);
+            LogMsg("Invalid integer for screen cap scale", 1);
         }
     }
-    
+
     void f_print(string[] s)
     {
         if (s.Length >= 2)
@@ -468,26 +506,26 @@ public class DL : MonoBehaviour
             {
                 final += s[i] + " ";
             }
-            Log(final);
+            LogMsg(final);
         }
     }
-    
+
     void f_version(string[] s)
     {
-        Log("<i>Version: </i>" + Application.version);
+        LogMsg("<i>Version: </i>" + Application.version);
     }
-  
+
     void f_clear(string[] s)
     {
         outputLog.text = "";
         rect.verticalNormalizedPosition = 1f;
     }
-  
+
     void f_quit(string[] s)
     {
         Application.Quit();
     }
-    
+
     void f_palleteSwap(string[] s)
     {
         if (s.Length >= 2)
@@ -498,11 +536,11 @@ public class DL : MonoBehaviour
                 {
                     swap.RandomizeColorSet();
                     swap.UpdateSpriteWithPallete();
-                    Log($"Randomization Complete On {found.name}");
+                    LogMsg($"Randomization Complete On {found.name}");
                 }
                 else
                 {
-                    Log($"Pallete Swap Script not found on {found.name}");
+                    LogMsg($"Pallete Swap Script not found on {found.name}");
                 }
             }
         }
@@ -512,89 +550,125 @@ public class DL : MonoBehaviour
     {
         if (s.Length >= 2)
         {
-            if(s[1].ToLower() == "server")
+            if (s[1].ToLower() == "server")
             {
-                selfServer = new Server(10);
-                selfServer.StartListening();
+                NetGameController.instance.StartServer();
 
-                Gismo.Networking.NetworkPackets.ServerFunctions.Add(Gismo.Networking.NetworkPackets.ClientSentPackets.StringSend, StringSentToServer);
+                NetworkPackets.ServerFunctions.Add(NetworkPackets.ClientSentPackets.MSGSend, StringSentToServer);
             }
-            else if(s[1].ToLower() == "client")
+            else if (s[1].ToLower() == "client")
             {
-                selfClient = new Client();
-                selfClient.Connect("localHost");
-
-                Gismo.Networking.NetworkPackets.ClientFunctions.Add(Gismo.Networking.NetworkPackets.ServerSentPackets.StringSend, StringSentToClient);
-            }
-            else if(s[1].ToLower() == "msg")
-            {
-                if(selfServer != null)
+                string ip = "localHost";
+                if (s.Length >= 3)
                 {
-                    Packet packet = new Packet(Gismo.Networking.NetworkPackets.ServerSentPackets.StringSend);
-
-                    string resultingString = "PING!";
-
-                    if (s.Length >= 2)
-                    {
-                        resultingString = GetString(s,2);
-                    }
-
-                    packet.WriteString(resultingString);
-
-                    selfServer.SendDataToAll(packet);
-
-                    Log($"\"{resultingString}\"Ping sent to clients");
+                    ip = GetString("localHost", s, 2);
                 }
-                else if(selfClient != null)
-                {
-                    Packet packet = new Packet(Gismo.Networking.NetworkPackets.ClientSentPackets.StringSend, selfClient.clientID);
 
-                    string resultingString = "PING!";
+                Log(ip);
 
-                    if (s.Length >= 2)
-                    {
-                        resultingString = GetString(s, 2);
-                    }
+                NetGameController.instance.StartClient(ip);
 
-                    packet.WriteString(resultingString);
-
-                    selfClient.SendData(packet);
-                    Log($"\"{resultingString}\"Ping sent to server");
-                }
-                else
-                {
-                    Log("Please connect to server or act as client before pinging");
-                }
+                NetworkPackets.ClientFunctions.Add(NetworkPackets.ServerSentPackets.MSGSend, StringSentToClient);
             }
             else
             {
-                Log($"Command {s[1]} not found");
+                LogMsg($"Command {s[1]} not found");
             }
+        }
+    }
+
+    void f_net(string[] s)
+    {
+        if (NetGameController.instance.IsConnected())
+        {
+            if (s.Length >= 2)
+            {
+                if (s[1].ToLower() == "msg")
+                {
+                    if (NetGameController.instance.GetConnectionType() == ConnectionType.Server)
+                    {
+                        Packet packet = new Packet(NetworkPackets.ServerSentPackets.MSGSend);
+
+                        string resultingString = GetString("PING!", s, 2);
+
+                        packet.WriteString(resultingString);
+
+                        NetGameController.instance.SendDataToAll_S(packet);
+
+                        LogMsg($"\"{resultingString}\"Ping sent to clients");
+                    }
+                    else if (NetGameController.instance.GetConnectionType() == ConnectionType.Client)
+                    {
+                        Packet packet = new Packet(NetworkPackets.ClientSentPackets.MSGSend, NetGameController.instance.GetUserID());
+
+                        string resultingString = GetString("PING!", s, 2);
+                        packet.WriteString(resultingString);
+
+                        NetGameController.instance.SendData_C(packet);
+                        LogMsg($"\"{resultingString}\"Ping sent to server");
+                    }
+                }
+                else if (s[1].ToLower() == "id")
+                {
+                    Log($"Your player ID is {NetGameController.instance.GetUserID()}");
+                }
+                else if(s[1].ToLower() == "debug")
+                {
+                    NetGameController.instance.DoDebug = !NetGameController.instance.DoDebug;
+
+                    LogMsg($"NetGameController -> {NetGameController.instance.DoDebug}");
+                }
+                else if(s[1].ToLower() == "cidd")
+                {
+                    Log(NetGameController.instance.f_gnetHelper());
+                }
+                else if(s[1].ToLower() == "disconnect")
+                {
+                    NetGameController.instance.Disconnect();
+                }
+                else if(s[1].ToLower() == "connecttype")
+                {
+                    Log(NetGameController.instance.GetConnectionType().ToString());
+                }
+                else
+                {
+                    LogMsg($"Command {s[1]} not found");
+                }
+            }
+        }
+        else
+        {
+            LogMsg("Please connect to server or act as client before doing net commands");
         }
     }
 
     #endregion
     public static void SelfPrint(string msg, int flag = 0)
     {
-        instance.Log(msg, flag);
+        instance.LogMsg(msg, flag);
     }
+
     public static void SelfPrint(string[] msg, int flag = 0)
     {
-        instance.Log(msg, flag);
+        instance.LogMsg(msg, flag);
     }
 
     public static void SelfPrint(string[] msg, Dev.DebugLevel level)
     {
-        instance.Log(msg, (int)level);
+        instance.LogMsg(msg, (int)level);
     }
 
     public static void SelfPrint(string msg, Dev.DebugLevel level)
     {
-        instance.Log(msg, (int)level);
+        instance.LogMsg(msg, (int)level);
     }
 
-    public string GetString(string [] s, int startIndex = 1)
+    public string GetString(string startingValue, string[] s, int startIndex = 1)
     {
+        if (s.Length < 2)
+        {
+            return startingValue;
+        }
         string result = "";
         for (int i = startIndex; i < s.Length; i++)
         {
@@ -605,14 +679,14 @@ public class DL : MonoBehaviour
 
     public bool FindObject(string[] s, out GameObject foundObject)
     {
-        string resultingName = GetString(s).Trim();
+        string resultingName = GetString(null, s).Trim();
 
         if (GameObject.Find(resultingName) != null)
         {
             foundObject = GameObject.Find(resultingName);
             return true;
         }
-        else if(GameObject.Find(resultingName.ToLower()) != null)
+        else if (GameObject.Find(resultingName.ToLower()) != null)
         {
             foundObject = GameObject.Find(resultingName.ToLower());
             return true;
@@ -624,7 +698,7 @@ public class DL : MonoBehaviour
         }
         else
         {
-            Log($"Cannot find object with name of {resultingName}");
+            LogMsg($"Cannot find object with name of {resultingName}");
             foundObject = null;
             return false;
         }
@@ -642,9 +716,9 @@ public class DL : MonoBehaviour
         }
         else
         {
-            Log("Please insert a boolean compatatble input", 1);
-            Log("Options are \"true\"/\"t\" or \"false\"/\"f\"", 1);
-            Log(i,Dev.DebugLogType.error);
+            LogMsg("Please insert a boolean compatatble input", 1);
+            LogMsg("Options are \"true\"/\"t\" or \"false\"/\"f\"", 1);
+            LogMsg(i, Dev.DebugLogType.error);
 
             return false;
         }

@@ -19,7 +19,7 @@ namespace Gismo.Networking.Core
             {
                 if (action == null)
                 {
-                    throw new ArgumentNullException("action");
+                    return;
                 }
 
                 lock (actionQueuesFunctions)
@@ -59,7 +59,7 @@ namespace Gismo.Networking.Core
         private static ActionQueue lateUpdate;
         private static ActionQueue fixedUpdate;
 
-        public static void InitalizeThreading(bool visible = false)
+        public static void InitalizeThreading(bool visible = true)
         {
             if (instance != null)
             {

@@ -2,7 +2,9 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace Gismo.Networking.Client
+using static DL;
+
+namespace Gismo.Networking.Users
 {
     public sealed class Client : IDisposable
     {
@@ -12,6 +14,8 @@ namespace Gismo.Networking.Client
         public int clientID;
 
         private readonly ByteBuffers buffers;
+
+        public static ClientFunction onClientConnected;
 
         public bool IsConnected
         {
@@ -25,7 +29,6 @@ namespace Gismo.Networking.Client
 
         public Client()
         {
-            Core.GismoThreading.InitalizeThreading();
             NetworkPackets.InitalizeFunctions();
 
             clientID = -1;
@@ -41,7 +44,11 @@ namespace Gismo.Networking.Client
         public void Connect(string ip)
         {
             if (selfSocket == null || selfSocket.Connected || isConnecting)
+            {
+                Log("Connection initalizeation has failed");
                 return;
+            }
+
             if (ip.ToLower() == "localhost")
             {
                 selfSocket.BeginConnect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), NetworkStatics.portNumberTCP), new AsyncCallback(DoConnect), null);
@@ -51,27 +58,24 @@ namespace Gismo.Networking.Client
                 selfSocket.BeginConnect(new IPEndPoint(IPAddress.Parse(ip), NetworkStatics.portNumberTCP), new AsyncCallback(DoConnect), null);
             }
 
-            DL.instance.Log($"Connected to ip {ip} with port {NetworkStatics.portNumberTCP}");
+            Log($"Connected to ip {ip} with port {NetworkStatics.portNumberTCP}");
         }
 
         private void DoConnect(IAsyncResult result)
         {
+            isConnecting = false;
             try
             {
                 selfSocket.EndConnect(result);
             }
             catch
             {
-                isConnecting = false;
+                Log("Do Connect in Client Faililed");
                 return;
             }
-            if (!selfSocket.Connected)
+
+            if (selfSocket.Connected)
             {
-                isConnecting = false;
-            }
-            else
-            {
-                isConnecting = false;
                 selfSocket.ReceiveBufferSize = NetworkStatics.bufferSize;
                 selfSocket.SendBufferSize = NetworkStatics.bufferSize;
                 BeginReceiveData();
@@ -80,7 +84,7 @@ namespace Gismo.Networking.Client
 
         private void BeginReceiveData()
         {
-            buffers.recieveBuffer = new byte[NetworkStatics.bufferSize];
+            buffers.ResetBuffers();
             selfSocket.BeginReceive(buffers.recieveBuffer, 0, selfSocket.ReceiveBufferSize, SocketFlags.None, new AsyncCallback(DoReceive), null);
         }
 
@@ -93,15 +97,19 @@ namespace Gismo.Networking.Client
             }
             catch
             {
-                DL.instance.Log("Net ERROR: Socket error, possibly forced closure");
+                Log("Net ERROR: Socket error, possibly forced closure");
                 Disconnect();
                 return;
             }
+
             if (socketLength == 0)
             {
                 if (selfSocket == null)
+                {
+                    Log("No Socket in DoRecieve");
                     return;
-                DL.instance.Log("Net ERROR: No data recieved!");
+                }
+                Log("Net ERROR: No data recieved!");
                 Disconnect();
             }
             else
@@ -115,26 +123,32 @@ namespace Gismo.Networking.Client
 
         private void PacketHandler()
         {
-            DL.instance.Log($"{buffers.GetBufferSizes()}");
-            if(buffers.packetRing.Length < 4)
+            //Log($"{buffers.GetBufferSizes()}");
+            if (buffers.packetRing.Length < 4)
             {
-                DL.instance.Log("Net ERROR: Packet isn't long enough to contain a packet ID");
+                Log("Net ERROR: Packet isn't long enough to contain a packet ID");
                 Disconnect();
                 return;
             }
             else
-            {                 
+            {
                 Core.Packet packet = new Core.Packet(buffers.packetRing);
                 NetworkPackets.ServerSentPackets packetID = (NetworkPackets.ServerSentPackets)Enum.ToObject(typeof(NetworkPackets.ServerSentPackets), packet.ReadPacketID());
-                DL.instance.Log($"Got packet of {packetID}");
+                
+                Log($"Got packet of {packetID}");
 
-                if(NetworkPackets.ClientFunctions.ContainsKey(packetID))
+                if (NetworkPackets.ClientFunctions.ContainsKey(packetID))
                 {
-                    NetworkPackets.ClientFunctions[packetID].Invoke(packet);
+                    Core.GismoThreading.ExecuteInNormalUpdate( ()=>
+                    {
+                        NetworkPackets.ClientFunctions[packetID].Invoke(packet);
+
+                        packet.Dispose();
+                    });
                 }
                 else
                 {
-                    DL.instance.Log($"Client functions doesn't have an entry for {packetID}");
+                    Log($"Client functions doesn't have an entry for {packetID}");
                 }
                 return;
             }
@@ -144,13 +158,13 @@ namespace Gismo.Networking.Client
         {
             if (!selfSocket.Connected)
             {
-                DL.instance.Log($"Net ERROR: Socket isn't connected, cannot send data to disconnected socket");
+                Log($"Net ERROR: Socket isn't connected, cannot send data to disconnected socket");
                 return;
             }
 
-            if(clientID == -1)
+            if (clientID == -1)
             {
-                DL.instance.Log("NET ERROR: Socket hasn't been assigned a player ID yet");
+                Log("NET ERROR: Socket hasn't been assigned a player ID yet");
                 return;
             }
 
@@ -166,23 +180,37 @@ namespace Gismo.Networking.Client
             }
             catch
             {
-                DL.instance.Log("Net ERROR: ConnectionForciblyClosedException");
+                Log("Net ERROR: ConnectionForciblyClosedException");
                 Disconnect();
             }
         }
 
         public void RecievePlayerID(Core.Packet packet)
         {
-            clientID = packet.ReadInt();
-            DL.instance.Log($"Got a player ID of {clientID}");
+            if (clientID == -1)
+            {
+                clientID = packet.ReadInt();
+                Log($"Got a player ID of {clientID}");
+
+                onClientConnected?.Invoke(clientID);
+            }
+            else
+            {
+                Log($"Got duplicate player id packet of {packet.ReadInt()}, even though we have been set up correctly | {clientID} | {packet.timeStamp.Second} ");
+            }
         }
 
         public void Disconnect(bool forcedDisconnect = true)
         {
             if (selfSocket == null || !selfSocket.Connected)
+            {
+                Log("Socket isn't set up correctly");
                 return;
-            if(forcedDisconnect)
-                DL.instance.Log($"Disconnecting");
+            }
+            if (forcedDisconnect)
+                Log($"Disconnecting");
+
+            Log($"Beggining Disconnecting");
             selfSocket.BeginDisconnect(false, new AsyncCallback(DoDisconnect), null);
         }
 
@@ -193,7 +221,9 @@ namespace Gismo.Networking.Client
                 selfSocket.EndDisconnect(result);
             }
             catch
-            {}
+            {
+                Log($"Do Disconnect for {result} has failed");
+            }
         }
 
         public void Dispose()
