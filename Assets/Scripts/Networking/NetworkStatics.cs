@@ -38,7 +38,7 @@ namespace Gismo.Networking
     }
     public class NetworkStatics
     {
-        public static int bufferSize = 64;
+        public static int bufferSize = 128;
 
         public static string ByteToString(byte[] bytes)
         {
@@ -55,7 +55,7 @@ namespace Gismo.Networking
         public const int portNumberTCP = 1173;
         public const int portNumberUDP = 1174;
 
-        public const int maxServerConnections = 10;
+        public const int maxServerConnections = 3;
     }
 
     public class NetworkPackets

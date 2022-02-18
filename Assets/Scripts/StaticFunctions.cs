@@ -10,6 +10,17 @@ namespace Gismo
 {
     public static class ClassExtensions
     {
+        public static Vector2 ToVector2(this Vector3 input)
+        {
+            return new Vector2(input.x, input.y);
+        }
+
+        public static Vector3 ChangeZ(this Vector3 input, float zValue)
+        {
+            input.z = zValue;
+            return input;
+        }
+
         public static string GetString(this byte[] bytes)
         {
             string returnable = "{";

@@ -298,6 +298,9 @@ namespace Gismo.Networking.Users
             if (!ValidClient(playerIndex))
             {
                 Log($"Player {playerIndex} lookup table and/or socket error");
+
+                DisconnectUser(playerIndex);
+
                 return;
             }
             socketLookupTable[playerIndex].BeginDisconnect(false, new AsyncCallback(DoDisconnect), playerIndex);
@@ -315,15 +318,19 @@ namespace Gismo.Networking.Users
                 Log($"Do Disconnect failed for {asyncState}");
             }
 
-            if (!socketLookupTable.ContainsKey(asyncState))
+            DisconnectUser(asyncState);
+        }
+
+        private void DisconnectUser(int id)
+        {
+            if (!socketLookupTable.ContainsKey(id))
             {
                 return;
             }
 
-            socketLookupTable[asyncState].Dispose();
-            socketLookupTable[asyncState] = null;
-            socketLookupTable.Remove(asyncState);
-            playerIDs.Add(asyncState);
+            socketLookupTable[id].Dispose();
+            socketLookupTable[id] = null;
+            socketLookupTable.Remove(id);
         }
 
         private int FindEmptySlot(int startIndex)

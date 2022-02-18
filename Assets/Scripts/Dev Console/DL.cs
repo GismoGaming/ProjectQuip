@@ -11,6 +11,8 @@ using UnityEngine.UI;
 using Gismo.Quip;
 using Gismo.Networking;
 
+using UnityEngine.InputSystem;
+
 
 public class Dev
 {
@@ -87,6 +89,8 @@ public class DL : MonoBehaviour
                     break;
             }
         };
+
+        Application.targetFrameRate = 60;
     }
 
     void PopulateEditorActions(string[] tags, EditorAction action, string displayName, string description, HelpListDetail detailLevelType = HelpListDetail.min)
@@ -220,7 +224,7 @@ public class DL : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F1) || Input.GetKeyDown(KeyCode.Slash))
+        if (Keyboard.current.f1Key.wasReleasedThisFrame || Keyboard.current.slashKey.wasReleasedThisFrame)
         {
             consoleUp = !consoleUp;
             commandInput.Select();
@@ -229,7 +233,7 @@ public class DL : MonoBehaviour
             commandInput.Select();
         }
 
-        if (consoleUp && (Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Return)))
+        if (consoleUp && (Keyboard.current.numpadEnterKey.wasReleasedThisFrame || Keyboard.current.backquoteKey.wasReleasedThisFrame))
         {
             enterConsole(commandInput.text);
             commandStack.add(commandInput.text);
@@ -241,7 +245,7 @@ public class DL : MonoBehaviour
             commandInput.Select();
         }
 
-        if (consoleUp && Input.GetKeyDown(KeyCode.DownArrow))
+        if (consoleUp && Keyboard.current.downArrowKey.wasReleasedThisFrame)
         {
             index++;
             index = Mathf.Clamp(index, 0, commandStack.getCount());
@@ -252,7 +256,7 @@ public class DL : MonoBehaviour
 
             commandInput.Select();
         }
-        if (consoleUp && Input.GetKeyDown(KeyCode.UpArrow))
+        if (consoleUp && Keyboard.current.upArrowKey.IsPressed())
         {
             index--;
             index = Mathf.Clamp(index, 0, commandStack.getCount());
@@ -263,13 +267,13 @@ public class DL : MonoBehaviour
 
             commandInput.Select();
         }
-        if (Input.GetKeyDown(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.Tab))
+        if (Keyboard.current.leftShiftKey.IsPressed() && Keyboard.current.tabKey.IsPressed())
         {
             if (!Directory.Exists(Dev.devFileLocation + "/DevPhotos/"))
             {
                 Directory.CreateDirectory(Dev.devFileLocation + "/DevPhotos/");
             }
-            string fileLocation = Dev.devFileLocation + "/DevPhotos/" + System.DateTime.Now.Millisecond + ".png";
+            string fileLocation = Dev.devFileLocation + "/DevPhotos/" + DateTime.Now.Millisecond + ".png";
             ScreenCapture.CaptureScreenshot(fileLocation, screenCaptureSS);
             LogMsg($"Took picture: {fileLocation}", Dev.DebugLogType.italics);
         }
@@ -548,7 +552,7 @@ public class DL : MonoBehaviour
 
     void f_netConnect(string[] s)
     {
-        if (s.Length >= 2)
+        if (s.Length >= 2 && !NetGameController.instance.IsConnected())
         {
             if (s[1].ToLower() == "server")
             {

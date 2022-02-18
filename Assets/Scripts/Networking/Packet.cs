@@ -110,6 +110,10 @@ namespace Gismo.Networking.Core
             {
                 doubleRawLength *= 2;
             }
+
+            if (doubleRawLength > NetworkStatics.bufferSize)
+                throw new Exception($"Packet is larger than the read/ recived buffers");
+
             byte[] bytes = new byte[doubleRawLength];
             Buffer.BlockCopy(rawData, 0, bytes, 0, readIndex);
             rawData = bytes;

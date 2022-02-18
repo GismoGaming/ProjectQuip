@@ -6,6 +6,12 @@ using static DL;
 
 namespace Gismo.Quip
 {
+    [System.Serializable]
+    public struct LeanTweenMovement
+    {
+        public float timing;
+        public LeanTweenType type;
+    }
     public enum ConnectionType { NA, Server, Client};
     class NetGameController : MonoBehaviour
     {
@@ -18,11 +24,11 @@ namespace Gismo.Quip
 
         public bool DoDebug = false;
 
-        [SerializeField] private GameObject playerPrefab;
+        [SerializeField] private GameObject[] playerPrefabs;
 
         private int userID;
 
-        Dictionary<int, PlayerMovement> clientIDDictionary;
+        Dictionary<int, PlayerController> clientIDDictionary;
 
         public string f_gnetHelper()
         {
@@ -43,7 +49,7 @@ namespace Gismo.Quip
 
                 instance = this;
 
-                clientIDDictionary = new Dictionary<int, PlayerMovement>();
+                clientIDDictionary = new Dictionary<int, PlayerController>();
             }
             else
             {
@@ -139,24 +145,15 @@ namespace Gismo.Quip
 
         void Client_PlayerDictionaryShare_Recieved(Packet packet)
         {
-            Log("Got player dict packet recieve");
-            int x = packet.ReadInt();
-            Log($"{x}");
-            for (int i = 0; i <= x; i++)
+            int clientCount = packet.ReadInt();
+            for (int i = 1; i <= clientCount; i++)
             {
-                int playerID = packet.ReadInt();
-                Vector3 position = packet.ReadVector3();
-                Log($"ID: {playerID} \t startPos: {position}");
-
-                HandleClientPositionPacket(playerID, position);
+                HandleClientPositionPacket(packet.ReadInt(), packet.ReadVector3());
             }
         }
 
         void HandleClientPositionPacket(int id, Vector3 pos)
         {
-            if(DoDebug)
-                Log($"Got packet for id of {id} and data of {pos}");
-
             if (clientIDDictionary.ContainsKey(id))
             {
                 clientIDDictionary[id].UpdatePosition(pos);
@@ -167,13 +164,32 @@ namespace Gismo.Quip
             }
         }
 
-        PlayerMovement SpawnStartingGameObjects(int id, Vector3 startPos)
+        PlayerController SpawnStartingGameObjects(int id, Vector3 startPos)
         {
-            PlayerMovement p = Instantiate(playerPrefab).GetComponent<PlayerMovement>();
-            p.transform.position = startPos;
+            PlayerController controller = null;
+            Generic.SimpleFollow followController = null;
 
-            p.Initalize(id);
-            return p;
+            foreach (GameObject g in playerPrefabs)
+            {
+                GameObject newObject = Instantiate(g);
+
+                newObject.transform.position = startPos;
+                if (newObject.TryGetComponent(out PlayerController p))
+                {
+                    p.Initalize(id, startPos);
+
+                    controller = p;
+                }
+
+                if (newObject.TryGetComponent(out Generic.SimpleFollow s))
+                {
+                    followController = s;
+                }
+            }
+
+            followController.SetTarget(controller.gameObject.transform);
+
+            return controller;
         }
 
         public Packet GetClientArrayPacket()
@@ -181,8 +197,6 @@ namespace Gismo.Quip
             Packet p = new Packet(Networking.NetworkPackets.ServerSentPackets.PlayerDictionaryShare);
 
             p.WriteInt(clientIDDictionary.Count);
-
-            Log($"{clientIDDictionary.Count}");
 
             foreach(int i in clientIDDictionary.Keys)
             {
@@ -221,7 +235,7 @@ namespace Gismo.Quip
         public void StartServer()
         {
             connectType = ConnectionType.Server;
-            server = new Server(10);
+            server = new Server(3);
             Server.onClientConnected = null;
             Server.onServerUp = null;
 
