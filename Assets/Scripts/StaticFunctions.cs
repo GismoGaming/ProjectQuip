@@ -1,8 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -13,6 +8,16 @@ namespace Gismo
         public static Vector2 ToVector2(this Vector3 input)
         {
             return new Vector2(input.x, input.y);
+        }
+
+        public static Vector3 ToVector3(this Vector2 input,float z = 0f)
+        {
+            return new Vector3(input.x, input.y,z);
+        }
+
+        public static Vector2 AddRandomOnUnitCircle(this Vector3 input, float radius)
+        {
+            return input.ToVector2() + StaticFunctions.RandomOnUnitCircle(radius);
         }
 
         public static Vector3 ChangeZ(this Vector3 input, float zValue)
@@ -51,6 +56,10 @@ namespace Gismo
     }
     public class StaticFunctions
     {
+        public static Vector2 RandomOnUnitCircle(float radius)
+        {
+            return Random.insideUnitCircle.normalized * radius;
+        }
         public static bool IsRectWithinScreen(RectTransform rect, float offset = 0f)
         {
             Vector3[] corners = new Vector3[4];

@@ -45,14 +45,8 @@ namespace Gismo.Quip
 #if UNITY_EDITOR
             localPlayer = true;
 #else
-            localPlayer = controllingUser == NetGameController.instance.GetUserID();
+            localPlayer = controllingUser == NetGameController.Instance.GetUserID();
 #endif
-
-            
-            if (localPlayer)
-            {
-                GetComponent<SpriteRenderer>().color = Color.red;
-            }
             
             text.text = $"{controllingUser} - {localPlayer}";
 
@@ -63,6 +57,7 @@ namespace Gismo.Quip
 
             if (localPlayer)
             {
+                GetComponent<SpriteRenderer>().color = Color.red;
                 moveFlag = GameObject.Find("Move Flag");
 
                 transform.position = moveFlag.transform.position;

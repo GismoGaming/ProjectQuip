@@ -18,7 +18,7 @@ public class Dev
 {
     public enum DebugLogType { normal, error, blue, italics }
     public static bool noClipEnabled;
-    public static string devFileLocation = Application.dataPath + "/Dev";
+    public static string devFileLocation = Application.dataPath +  "/Dev";
     public enum DebugLevel { Off, Low, Medium, High };
 
     public static DebugLevel debugLevel = DebugLevel.High;
@@ -90,6 +90,16 @@ public class DL : MonoBehaviour
             }
         };
 
+
+        if (!Directory.Exists(Dev.devFileLocation))
+        {
+            Directory.CreateDirectory(Dev.devFileLocation);
+        }
+
+        if (!Directory.Exists(Path.Combine(Dev.devFileLocation , "/DevPhotos/")))
+        {
+            Directory.CreateDirectory(Path.Combine(Dev.devFileLocation,"/DevPhotos/"));
+        }
         Application.targetFrameRate = 60;
     }
 
@@ -168,7 +178,6 @@ public class DL : MonoBehaviour
                 Debug.Log("<b><i>GConsole:</i></b>\t" + msg);
             outputLog.text += msg + "\n";
         }
-
         fitter.SetLayoutVertical();
         rect.verticalNormalizedPosition = 0f;
     }
@@ -552,11 +561,11 @@ public class DL : MonoBehaviour
 
     void f_netConnect(string[] s)
     {
-        if (s.Length >= 2 && !NetGameController.instance.IsConnected())
+        if (s.Length >= 2 && !NetGameController.Instance.IsConnected())
         {
             if (s[1].ToLower() == "server")
             {
-                NetGameController.instance.StartServer();
+                NetGameController.Instance.StartServer();
 
                 NetworkPackets.ServerFunctions.Add(NetworkPackets.ClientSentPackets.MSGSend, StringSentToServer);
             }
@@ -570,7 +579,7 @@ public class DL : MonoBehaviour
 
                 Log(ip);
 
-                NetGameController.instance.StartClient(ip);
+                NetGameController.Instance.StartClient(ip);
 
                 NetworkPackets.ClientFunctions.Add(NetworkPackets.ServerSentPackets.MSGSend, StringSentToClient);
             }
@@ -583,13 +592,13 @@ public class DL : MonoBehaviour
 
     void f_net(string[] s)
     {
-        if (NetGameController.instance.IsConnected())
+        if (NetGameController.Instance.IsConnected())
         {
             if (s.Length >= 2)
             {
                 if (s[1].ToLower() == "msg")
                 {
-                    if (NetGameController.instance.GetConnectionType() == ConnectionType.Server)
+                    if (NetGameController.Instance.GetConnectionType() == ConnectionType.Server)
                     {
                         Packet packet = new Packet(NetworkPackets.ServerSentPackets.MSGSend);
 
@@ -597,42 +606,42 @@ public class DL : MonoBehaviour
 
                         packet.WriteString(resultingString);
 
-                        NetGameController.instance.SendDataToAll_S(packet);
+                        NetGameController.Instance.SendDataToAll_S(packet);
 
                         LogMsg($"\"{resultingString}\"Ping sent to clients");
                     }
-                    else if (NetGameController.instance.GetConnectionType() == ConnectionType.Client)
+                    else if (NetGameController.Instance.GetConnectionType() == ConnectionType.Client)
                     {
-                        Packet packet = new Packet(NetworkPackets.ClientSentPackets.MSGSend, NetGameController.instance.GetUserID());
+                        Packet packet = new Packet(NetworkPackets.ClientSentPackets.MSGSend, NetGameController.Instance.GetUserID());
 
                         string resultingString = GetString("PING!", s, 2);
                         packet.WriteString(resultingString);
 
-                        NetGameController.instance.SendData_C(packet);
+                        NetGameController.Instance.SendData_C(packet);
                         LogMsg($"\"{resultingString}\"Ping sent to server");
                     }
                 }
                 else if (s[1].ToLower() == "id")
                 {
-                    Log($"Your player ID is {NetGameController.instance.GetUserID()}");
+                    Log($"Your player ID is {NetGameController.Instance.GetUserID()}");
                 }
                 else if(s[1].ToLower() == "debug")
                 {
-                    NetGameController.instance.DoDebug = !NetGameController.instance.DoDebug;
+                    NetGameController.Instance.DoDebug = !NetGameController.Instance.DoDebug;
 
-                    LogMsg($"NetGameController -> {NetGameController.instance.DoDebug}");
+                    LogMsg($"NetGameController -> {NetGameController.Instance.DoDebug}");
                 }
                 else if(s[1].ToLower() == "cidd")
                 {
-                    Log(NetGameController.instance.f_gnetHelper());
+                    Log(NetGameController.Instance.f_gnetHelper());
                 }
                 else if(s[1].ToLower() == "disconnect")
                 {
-                    NetGameController.instance.Disconnect();
+                    NetGameController.Instance.Disconnect();
                 }
                 else if(s[1].ToLower() == "connecttype")
                 {
-                    Log(NetGameController.instance.GetConnectionType().ToString());
+                    Log(NetGameController.Instance.GetConnectionType().ToString());
                 }
                 else
                 {

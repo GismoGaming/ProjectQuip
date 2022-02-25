@@ -51,9 +51,7 @@ namespace Gismo.Quip.Cards
                     rect.SetParent(outsideRect);
 
                     rect.LeanSize(changedSize, generalMovement.timing).setEase(generalMovement.type);
-                }
-
-                
+                }       
             }
 
             if (isDragging)

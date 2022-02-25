@@ -38,7 +38,7 @@ namespace Gismo.Networking
     }
     public class NetworkStatics
     {
-        public static int bufferSize = 128;
+        public static int bufferSize = 256;
 
         public static string ByteToString(byte[] bytes)
         {
@@ -64,7 +64,7 @@ namespace Gismo.Networking
         public enum ClientSentPackets { MSGSend, ClientPosition};
 
         // Sent to a specific client from the server
-        public enum ServerSentPackets { FirstConnect ,MSGSend, ClientPositionShare, PlayerDictionaryShare };
+        public enum ServerSentPackets { FirstConnect ,MSGSend, ClientPositionShare, PlayerDictionaryShare, MineralSpawn, MineralInit };
 
         /// <summary>
         /// Server Function Dictionary that contains all functions that the server executes upon 

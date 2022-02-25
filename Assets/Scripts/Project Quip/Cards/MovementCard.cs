@@ -1,6 +1,7 @@
-﻿using Gismo.Networking;
-using Gismo.Networking.Core;
+﻿using UnityEngine.AI;
 using UnityEngine;
+using Gismo.Networking;
+using Gismo.Networking.Core;
 
 namespace Gismo.Quip.Cards
 {
@@ -27,14 +28,14 @@ namespace Gismo.Quip.Cards
             lastKnown = flag.transform.position;
 
 #if !UNITY_EDITOR
-            switch (NetGameController.instance.GetConnectionType())
+            switch (NetGameController.Instance.GetConnectionType())
             {
                 case ConnectionType.Client:
-                    Packet clientPacket = new Packet(NetworkPackets.ClientSentPackets.ClientPosition, NetGameController.instance.GetUserID());
+                    Packet clientPacket = new Packet(NetworkPackets.ClientSentPackets.ClientPosition, NetGameController.Instance.GetUserID());
 
                     clientPacket.WriteVector3(flag.transform.position);
 
-                    NetGameController.instance.SendData_C(clientPacket);
+                    NetGameController.Instance.SendData_C(clientPacket);
                     break;
                 case ConnectionType.Server:
                     Packet serverPacket = new Packet(NetworkPackets.ServerSentPackets.ClientPositionShare);
@@ -42,7 +43,7 @@ namespace Gismo.Quip.Cards
                     serverPacket.WriteInt(-1);
                     serverPacket.WriteVector3(flag.transform.position);
 
-                    NetGameController.instance.SendDataToAll_S(serverPacket);
+                    NetGameController.Instance.SendDataToAll_S(serverPacket);
                     break;
                 default:
                     return;
