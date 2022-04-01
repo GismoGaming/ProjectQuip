@@ -38,7 +38,9 @@ namespace Gismo.Networking
     }
     public class NetworkStatics
     {
-        public static int bufferSize = 256;
+        public static int bufferSize = 2048;
+
+        public static Core.Packet EMPTY;
 
         public static string ByteToString(byte[] bytes)
         {
@@ -61,10 +63,10 @@ namespace Gismo.Networking
     public class NetworkPackets
     {
         // Sent to the server from clients
-        public enum ClientSentPackets { MSGSend, ClientPosition};
+        public enum ClientSentPackets { MSGSend, ClientPosition, DepositLoseMineral, PickupMineral, MineralMineBegin, MineralCollected };
 
         // Sent to a specific client from the server
-        public enum ServerSentPackets { FirstConnect ,MSGSend, ClientPositionShare, PlayerDictionaryShare, MineralSpawn, MineralInit };
+        public enum ServerSentPackets { FirstConnect ,MSGSend, PlayerTPRequest, GroupTPRequest,ClientPositionShare, PlayerDictionaryShare, MineralDepositInit, MineralSpawn, PickupMineral, MineralCollected };
 
         /// <summary>
         /// Server Function Dictionary that contains all functions that the server executes upon 
@@ -77,7 +79,7 @@ namespace Gismo.Networking
         /// Recieving a packet from the server
         /// </summary>
         public static Dictionary<ServerSentPackets, ServerPacketRecieved> ClientFunctions;
-        public delegate void ClientPacketRecieved(Core.Packet packet, int playerID);
+        public delegate void ClientPacketRecieved(Core.Packet packet, byte playerID);
         public delegate void ServerPacketRecieved(Core.Packet packet);
 
         static bool isInitalized;

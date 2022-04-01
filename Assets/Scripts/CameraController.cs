@@ -22,11 +22,16 @@ namespace Gismo.Quip
 
         private float zoomLevel;
 
-        void Start()
+        void Awake()
         {
             mainCamera = GetComponent<Camera>();
 
             zoomLevel = startingZoom;
+        }
+
+        public float GetDefaultZoom()
+        {
+            return startingZoom;
         }
 
         private void Update()
@@ -52,6 +57,16 @@ namespace Gismo.Quip
                     lastDragPosition = Mouse.current.position.ReadValue();
                 }
             }
+        }
+
+        public void SetPosition(Vector2 position, float zoom)
+        {
+            //DL.Log($"Setting position to {position} with zoom of {zoom}");
+            lastDragPosition = position;
+            transform.position = position.ToVector3(transform.position.z);
+            zoomLevel = zoom;
+
+            mainCamera.orthographicSize = zoomLevel;
         }
 
         private void OnDrawGizmosSelected()

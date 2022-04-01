@@ -1,8 +1,63 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
 namespace Gismo
 {
+    [System.Serializable]
+    public struct SerializableVector2
+    {
+        public float x;
+        public float y;
+
+        public SerializableVector2(float rX, float rY)
+        {
+            x = rX;
+            y = rY;
+        }
+
+        public SerializableVector2(Vector2 input)
+        {
+            x = input.x;
+            y = input.y;
+        }
+
+        public override string ToString()
+        {
+            return $"/{{{x}, /{{{y}";
+        }
+
+        public static implicit operator Vector2(SerializableVector2 self)
+        {
+            return new Vector2(self.x, self.y);
+        }
+
+        public static implicit operator SerializableVector2(Vector2 self)
+        {
+            return new SerializableVector2(self.x, self.y);
+        }
+    }
+
+    public class EnumTools<T> where T : Enum
+    {
+        public static T[] GetAllSelected(T sourceMask, List<T> ignored)
+        {
+            List<T> targets = new List<T>();
+            foreach (T check in Enum.GetValues(typeof(T)))
+            {
+                if (ignored.Contains(check))
+                    continue;
+                if (sourceMask.HasFlag(check))
+                {
+                    targets.Add(check);
+                }
+            }
+
+            return targets.ToArray();
+        }
+    }
+
     public static class ClassExtensions
     {
         public static Vector2 ToVector2(this Vector3 input)
@@ -35,6 +90,11 @@ namespace Gismo
             }
 
             return returnable + "}";
+        }
+
+        public static T GetRandomItem<T>(this List<T> self, int lowerBound = 0, int upperBound = 0)
+        {
+            return self[Random.Range(lowerBound, self.Count - 1 - upperBound)];
         }
 
         public static Rect GetGlobalPosition(this RectTransform rect)

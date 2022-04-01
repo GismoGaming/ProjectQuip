@@ -5,7 +5,7 @@ using Gismo.Networking.Core;
 
 namespace Gismo.Quip.Cards
 {
-    public class MovementCard : CardDropBase
+    public class MovementCard : CardHandler
     {
         public GameObject flag;
         Vector3 lastKnown;
@@ -13,7 +13,7 @@ namespace Gismo.Quip.Cards
 
         public override void Awake()
         {
-            OnCardDown += PrepairPacket;
+            OnCardDroped += PrepairPacket;
             base.Awake();
         }
 
@@ -33,15 +33,15 @@ namespace Gismo.Quip.Cards
                 case ConnectionType.Client:
                     Packet clientPacket = new Packet(NetworkPackets.ClientSentPackets.ClientPosition, NetGameController.Instance.GetUserID());
 
-                    clientPacket.WriteVector3(flag.transform.position);
+                    clientPacket.WriteVector2(flag.transform.position.ToVector2());
 
                     NetGameController.Instance.SendData_C(clientPacket);
                     break;
                 case ConnectionType.Server:
                     Packet serverPacket = new Packet(NetworkPackets.ServerSentPackets.ClientPositionShare);
 
-                    serverPacket.WriteInt(-1);
-                    serverPacket.WriteVector3(flag.transform.position);
+                    serverPacket.WriteByte(byte.MaxValue);
+                    serverPacket.WriteVector2(flag.transform.position.ToVector2());
 
                     NetGameController.Instance.SendDataToAll_S(serverPacket);
                     break;

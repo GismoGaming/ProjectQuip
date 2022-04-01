@@ -10,6 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 126955597685352918}
   - component: {fileID: 126955597685352919}
+  - component: {fileID: 690250254}
+  - component: {fileID: 690250256}
   m_Layer: 0
   m_Name: Game Controller
   m_TagString: Untagged
@@ -48,3 +50,36 @@ MonoBehaviour:
     - key: 0
       value:
         prefab: {fileID: 9022206298033728617, guid: 44da7ecf3c831584fb91048feffc818e, type: 3}
+        spawnCheckRadius: 0.5
+  maxRetryCount: 5
+--- !u!114 &690250254
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 126955597685352916}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c000a8c6e17b1f43b52c2538ec5777f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pickedUpMineral: []
+  mineralPickupCounter: {fileID: 0}
+  interactionCircle: {fileID: 0}
+--- !u!114 &690250256
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 126955597685352916}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26bb8b5c8bbd93e49badce4599f7becc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  DoDebug: 1
+  playerPrefabs:
+  - {fileID: 8977145332307147733, guid: da94d4e6b0943ce4f8c89fbf2b347346, type: 3}
+  - {fileID: 4670105086748998652, guid: 366dcc61791265945bf3c2580805ed1e, type: 3}

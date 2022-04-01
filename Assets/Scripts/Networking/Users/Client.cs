@@ -11,7 +11,7 @@ namespace Gismo.Networking.Users
         private Socket selfSocket;
         private bool isConnecting;
 
-        public int clientID;
+        public byte clientID;
 
         private readonly ByteBuffers buffers;
 
@@ -31,7 +31,7 @@ namespace Gismo.Networking.Users
         {
             NetworkPackets.InitalizeFunctions();
 
-            clientID = -1;
+            clientID = byte.MaxValue;
 
             NetworkPackets.ClientFunctions.Add(NetworkPackets.ServerSentPackets.FirstConnect, RecievePlayerID);
 
@@ -162,7 +162,7 @@ namespace Gismo.Networking.Users
                 return;
             }
 
-            if (clientID == -1)
+            if (clientID == byte.MaxValue)
             {
                 Log("NET ERROR: Socket hasn't been assigned a player ID yet");
                 return;
@@ -187,9 +187,9 @@ namespace Gismo.Networking.Users
 
         public void RecievePlayerID(Core.Packet packet)
         {
-            if (clientID == -1)
+            if (clientID == byte.MaxValue)
             {
-                clientID = packet.ReadInt();
+                clientID = packet.ReadByte();
                 Log($"Got a player ID of {clientID}");
 
                 onClientConnected?.Invoke(clientID);

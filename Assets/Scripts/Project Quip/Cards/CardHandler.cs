@@ -26,8 +26,28 @@ namespace Gismo.Quip.Cards
         [SerializeField] private LeanTweenMovement generalMovement;
 
         [Header("Card Events")]
-        [SerializeField] private UnityEvent OnCardResetHome;
-        [SerializeField] private UnityEvent OnCardDropped;
+        private Camera mainCamera;
+
+        public delegate void CardEvent();
+        public delegate void CardEventPositon(Vector3 position);
+
+        public CardEventPositon OnCardDroped;
+        public CardEvent OnCardStartDrag;
+        public CardEvent OnCardResetHome;
+
+        public CardEventPositon OnCardMoving;
+
+        private float zOffset;
+
+        public virtual void Awake()
+        {
+            mainCamera = Camera.main;
+        }
+
+        Vector3 GetMousePosition()
+        {
+            return mainCamera.ScreenToWorldPoint(transform.position).ChangeZ(zOffset);
+        }
 
         void Start()
         {
@@ -51,7 +71,9 @@ namespace Gismo.Quip.Cards
                     rect.SetParent(outsideRect);
 
                     rect.LeanSize(changedSize, generalMovement.timing).setEase(generalMovement.type);
-                }       
+
+                    OnCardStartDrag?.Invoke();
+                }
             }
 
             if (isDragging)
@@ -76,7 +98,7 @@ namespace Gismo.Quip.Cards
                     }
                     else
                     {
-                        OnCardDropped?.Invoke();
+                        OnCardDroped?.Invoke(GetMousePosition());
                         LTSeq seq = LeanTween.sequence();
                         seq.append(.5f);
                         seq.append(() => ResetCardToHome());
@@ -93,13 +115,20 @@ namespace Gismo.Quip.Cards
             }
         }
 
+        void LateUpdate()
+        {
+            OnCardMoving?.Invoke(GetMousePosition());
+        }
+
         void ResetCardToHome()
         {
             rect.LeanSize(startSize, generalMovement.timing).setEase(generalMovement.type);
-            LeanTween.move(rect.gameObject,homePosition,  generalMovement.timing).setEase(generalMovement.type);
+            LeanTween.move(rect.gameObject, homePosition, generalMovement.timing).setEase(generalMovement.type);
 
             rect.SetParent(homeDeckRect);
         }
+
+
     }
 }
 

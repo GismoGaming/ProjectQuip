@@ -6,17 +6,7 @@ using System.Text;
 
 namespace Gismo.Networking.Core
 {
-    public class NetTransform
-    {
-        public UnityEngine.Vector3 position;
-        public UnityEngine.Quaternion rotation;
-        public UnityEngine.Vector3 scale;
-
-        public override string ToString()
-        {
-            return $"{position} : {rotation.eulerAngles} : {scale}";
-        }
-    }
+    
     
     public struct Packet : IDisposable
     {
@@ -30,14 +20,14 @@ namespace Gismo.Networking.Core
             return rawData.GetString();
         }
 
-        public Packet(NetworkPackets.ClientSentPackets packetID, int playerID)
+        public Packet(NetworkPackets.ClientSentPackets packetID, byte playerID)
         {
-            rawData = new byte[8];
+            rawData = new byte[5];
             readIndex = 0;
             timeStamp = DateTime.Now;
 
             WriteInt((int)packetID);
-            WriteInt(playerID);
+            WriteByte(playerID);
         }
 
         public Packet(NetworkPackets.ServerSentPackets packetID)
@@ -73,7 +63,7 @@ namespace Gismo.Networking.Core
 
         public byte[] ToArray(bool shorten = true)
         {
-            if (shorten)
+            if (shorten && readIndex != 0)
             {
                 byte[] returnable = new byte[readIndex];
                 Buffer.BlockCopy(rawData, 0, returnable, 0, readIndex);
@@ -83,11 +73,17 @@ namespace Gismo.Networking.Core
             return rawData;
         }
 
+        public Packet CopyTo(Packet destPacket, bool isClient)
+        {
+            destPacket.WriteBlock(GetData(isClient));
+            return destPacket;
+        }
+
         public byte[] GetData(bool isClient)
         {
             List<byte> temp = new List<byte>(rawData);
             if (isClient)
-                temp.RemoveRange(0, 8);
+                temp.RemoveRange(0, 5);
             else
                 temp.RemoveRange(0, 4);
 
@@ -132,7 +128,7 @@ namespace Gismo.Networking.Core
             return resultArray;
         }
 
-        public object ReadObject(bool moveIndex = true)
+        object ReadObject(bool moveIndex = true)
         {
             if (readIndex + 4 > rawData.Length)
             {
@@ -143,16 +139,17 @@ namespace Gismo.Networking.Core
                 readIndex += 4;
             if (count <= 0 || readIndex + count > rawData.Length)
             {
-                throw new Exception("Not enough space to read this type in the packet");
+                throw new Exception("Not enough space to read this type in the packet with it's data");
             }
-            MemoryStream memoryStream = new MemoryStream();
-            memoryStream.SetLength(count);
-            memoryStream.Read(rawData, readIndex, count);
-            if (moveIndex)
-                readIndex += count;
-            object obj = new BinaryFormatter().Deserialize(memoryStream);
-            memoryStream.Dispose();
-            return obj;
+            using (MemoryStream memoryStream = new MemoryStream())
+            {
+                memoryStream.Write(rawData, readIndex, count);
+                if (moveIndex)
+                    readIndex += count;
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                object obj = new BinaryFormatter().Deserialize(memoryStream);
+                return obj;
+            }
         }
 
         public byte[] ReadBytes(bool moveIndex = true)
@@ -244,6 +241,19 @@ namespace Gismo.Networking.Core
             return integer;
         }
 
+        public uint ReadUint(bool moveIndex = true)
+        {
+            if (readIndex + 4 > rawData.Length)
+            {
+                throw new Exception("Not enough space to read this type in the packet");
+            }
+            uint integer = BitConverter.ToUInt32(rawData, readIndex);
+
+            if (moveIndex)
+                readIndex += 4;
+            return integer;
+        }
+
         public float ReadFloat(bool moveIndex = true)
         {
             if (readIndex + 4 > rawData.Length)
@@ -281,35 +291,27 @@ namespace Gismo.Networking.Core
             else
             {
                 int prevIndex = readIndex;
-                UnityEngine.Vector2 val = new UnityEngine.Vector3(ReadFloat(), ReadFloat());
+                UnityEngine.Vector2 val = new UnityEngine.Vector2(ReadFloat(), ReadFloat());
                 readIndex = prevIndex;
                 return val;
             }
         }
 
-        public NetTransform ReadTransform(bool moveIndex = true)
+        public T ReadGeneric<T>()
         {
-            if(moveIndex)
+            return (T)ReadObject();
+        }
+
+        public List<T> ReadList<T>()
+        {
+            int count = ReadInt();
+            List<T> result = new List<T>();
+
+            for(int i  = 0; i < count; i++)
             {
-                return new NetTransform
-                {
-                    position = ReadVector3(moveIndex),
-                    rotation = UnityEngine.Quaternion.Euler(ReadVector3(moveIndex)),
-                    scale = ReadVector3(moveIndex)
-                };
+                result.Add((T)ReadObject());
             }
-            else
-            {
-                int prevIndex = readIndex;
-                NetTransform t = new NetTransform
-                {
-                    position = ReadVector3(moveIndex),
-                    rotation = UnityEngine.Quaternion.Euler(ReadVector3(moveIndex)),
-                    scale = ReadVector3(moveIndex)
-                };
-                readIndex = prevIndex;
-                return t;
-            }
+            return result;
         }
 
         #endregion
@@ -329,13 +331,17 @@ namespace Gismo.Networking.Core
             readIndex += size;
         }
 
-        public void WriteObject(object value)
+        void WriteObject(object value)
         {
-            MemoryStream memoryStream = new MemoryStream();
-            new BinaryFormatter().Serialize(memoryStream, value);
-            byte[] array = memoryStream.ToArray();
-            int length = array.Length;
-            memoryStream.Dispose();
+            byte[] array;
+            int length;
+            using (MemoryStream memoryStream = new MemoryStream())
+            {
+                new BinaryFormatter().Serialize(memoryStream, value);
+
+                array = memoryStream.ToArray();
+                length = array.Length;
+            }
             WriteBlock(BitConverter.GetBytes(length));
             WriteBlock(array);
         }
@@ -388,6 +394,11 @@ namespace Gismo.Networking.Core
             WriteBlock(BitConverter.GetBytes(value));
         }
 
+        public void WriteUint(uint value)
+        {
+            WriteBlock(BitConverter.GetBytes(value));
+        }
+
         public void WriteFloat(float value)
         {
             WriteBlock(BitConverter.GetBytes(value));
@@ -411,6 +422,21 @@ namespace Gismo.Networking.Core
             WriteVector3(transform.position);
             WriteVector3(transform.rotation.eulerAngles);
             WriteVector3(transform.localScale);
+        }
+
+        public void WriteGeneric<T>(T item)
+        {
+            WriteObject(item);
+        }
+
+        public void WriteList<T>(List<T> list)
+        {
+            WriteInt(list.Count);
+
+            foreach (T item in list)
+            {
+                WriteObject(item);
+            }
         }
         #endregion
     }

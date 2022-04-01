@@ -7,19 +7,19 @@ using static DL;
 
 namespace Gismo.Networking.Users
 {
-    public delegate void ClientFunction(int id);
+    public delegate void ClientFunction(byte id);
 
     public sealed class Server : IDisposable
     {
-        private Dictionary<int, Socket> socketLookupTable;
-        private List<int> playerIDs;
+        private Dictionary<byte, Socket> socketLookupTable;
+        private List<byte> playerIDs;
         private Socket listenerSocket;
 
         public int clientLimit { get; }
 
         public bool serverListening { get; private set; }
 
-        public int currentMaxPlayerID { get; private set; }
+        public byte currentMaxPlayerID { get; private set; }
 
         public static ClientFunction onServerUp;
         public static ClientFunction onClientConnected;
@@ -31,8 +31,7 @@ namespace Gismo.Networking.Users
             {
                 return;
             }
-            socketLookupTable = new Dictionary<int, Socket>();
-            playerIDs = new List<int>();
+            socketLookupTable = new Dictionary<byte, Socket>();
             this.clientLimit = clientLimit;
         }
 
@@ -46,9 +45,9 @@ namespace Gismo.Networking.Users
             listenerSocket.Bind(new IPEndPoint(IPAddress.Any, NetworkStatics.portNumberTCP));
             serverListening = true;
             listenerSocket.Listen(NetworkStatics.maxServerConnections);
-            listenerSocket.BeginAccept(new AsyncCallback(DoAcceptClient), 0);
+            listenerSocket.BeginAccept(new AsyncCallback(DoAcceptClient), byte.MinValue);
 
-            onServerUp?.Invoke(-1);
+            onServerUp?.Invoke(byte.MaxValue);
 
             Log($"Started Server on port {NetworkStatics.portNumberTCP}, with max connections {NetworkStatics.maxServerConnections}");
         }
@@ -73,8 +72,8 @@ namespace Gismo.Networking.Users
         {
             Socket socket = listenerSocket.EndAccept(result);
 
-            int asyncState = (int)result.AsyncState;
-            int emptySlot = FindEmptySlot(asyncState);
+            byte asyncState = (byte)result.AsyncState;
+            byte emptySlot = FindEmptySlot();
 
             Log($"Got new client to add for Player ID of {emptySlot} and async {asyncState}");
             Log($"Socket Info R:{socket.RemoteEndPoint} and L:{socket.LocalEndPoint}");
@@ -92,11 +91,10 @@ namespace Gismo.Networking.Users
 
             BeginReceiveData(emptySlot);
 
-            Log($"Sending player id packet to {emptySlot}");
             Core.GismoThreading.ExecuteInNormalUpdate(() =>
             {
                 Core.Packet idPacket = new Core.Packet(NetworkPackets.ServerSentPackets.FirstConnect);
-                idPacket.WriteInt(emptySlot);
+                idPacket.WriteByte(emptySlot);
 
                 SendDataTo(emptySlot, idPacket);
 
@@ -116,7 +114,7 @@ namespace Gismo.Networking.Users
             return true;
         }
 
-        private void BeginReceiveData(int index)
+        private void BeginReceiveData(byte index)
         {
             PlayerConnection playerConnection = new PlayerConnection(index);
             socketLookupTable[index].BeginReceive(playerConnection.buffers.recieveBuffer, 0, NetworkStatics.bufferSize, SocketFlags.None, new AsyncCallback(DoReceive), playerConnection);
@@ -194,7 +192,7 @@ namespace Gismo.Networking.Users
                 if (NetworkPackets.ServerFunctions.ContainsKey(packetID))
                 {
 
-                    int cid = packet.ReadInt();
+                    byte cid = packet.ReadByte();
                     Core.GismoThreading.ExecuteInNormalUpdate(() =>
                     {
                         NetworkPackets.ServerFunctions[packetID].Invoke(packet, cid);
@@ -209,7 +207,7 @@ namespace Gismo.Networking.Users
             }
         }
 
-        public void SendDataTo(int playerIndex, Core.Packet packet)
+        public void SendDataTo(byte playerIndex, Core.Packet packet)
         {
             if (!ValidClient(playerIndex))
             {
@@ -221,14 +219,16 @@ namespace Gismo.Networking.Users
             }
             else
             {
+#if !UNITY_EDITOR
                 byte[] data = packet.ToArray();
                 socketLookupTable[playerIndex].BeginSend(data, 0, data.Length, SocketFlags.None, new AsyncCallback(DoSend), playerIndex);
+#endif
             }
         }
 
         public void SendDataToAll(Core.Packet packet)
         {
-            for (int index = 0; index <= currentMaxPlayerID; index++)
+            for (byte index = 0; index <= currentMaxPlayerID; index++)
             {
                 if (socketLookupTable.ContainsKey(index))
                 {
@@ -239,7 +239,7 @@ namespace Gismo.Networking.Users
 
         public void SendDataToAllBut(int notPlayerIndex, Core.Packet packet)
         {
-            for (int playerID = 0; playerID <= currentMaxPlayerID; playerID++)
+            for (byte playerID = 0; playerID <= currentMaxPlayerID; playerID++)
             {
                 if (socketLookupTable.ContainsKey(playerID) && playerID != notPlayerIndex)
                 {
@@ -250,7 +250,7 @@ namespace Gismo.Networking.Users
 
         private void DoSend(IAsyncResult result)
         {
-            int asyncState = (int)result.AsyncState;
+            byte asyncState = (byte)result.AsyncState;
             try
             {
                 socketLookupTable[asyncState].EndSend(result);
@@ -262,7 +262,7 @@ namespace Gismo.Networking.Users
             }
         }
 
-        public bool IsPlayerIndexConnected(int playerIndex)
+        public bool IsPlayerIndexConnected(byte playerIndex)
         {
             if (!socketLookupTable.ContainsKey(playerIndex))
             {
@@ -280,7 +280,7 @@ namespace Gismo.Networking.Users
             return Dns.GetHostEntry(Dns.GetHostName()).AddressList[0].ToString();
         }
 
-        public string ClientIp(int index)
+        public string ClientIp(byte index)
         {
             if (IsPlayerIndexConnected(index))
             {
@@ -290,7 +290,7 @@ namespace Gismo.Networking.Users
             throw new Exception("Client index doesn't exist");
         }
 
-        public void Disconnect(int playerIndex, bool forcedDisconnect = false)
+        public void Disconnect(byte playerIndex, bool forcedDisconnect = false)
         {
             if (forcedDisconnect)
                 Log($"Player {playerIndex} has been forced to disconnect");
@@ -308,7 +308,7 @@ namespace Gismo.Networking.Users
 
         private void DoDisconnect(IAsyncResult result)
         {
-            int asyncState = (int)result.AsyncState;
+            byte asyncState = (byte)result.AsyncState;
             try
             {
                 socketLookupTable[asyncState].EndDisconnect(result);
@@ -321,7 +321,7 @@ namespace Gismo.Networking.Users
             DisconnectUser(asyncState);
         }
 
-        private void DisconnectUser(int id)
+        private void DisconnectUser(byte id)
         {
             if (!socketLookupTable.ContainsKey(id))
             {
@@ -333,52 +333,18 @@ namespace Gismo.Networking.Users
             socketLookupTable.Remove(id);
         }
 
-        private int FindEmptySlot(int startIndex)
+        private byte FindEmptySlot()
         {
-            for (int index = playerIDs.Count - 1; index >= 0 && currentMaxPlayerID == playerIDs[index]; index--)
-            {
-                currentMaxPlayerID--;
-            }
+            byte empty = byte.MinValue;
 
-            if (playerIDs.Count > 0)
+            while (socketLookupTable.ContainsKey(empty))
             {
-                using (List<int>.Enumerator enumerator = playerIDs.GetEnumerator())
-                {
-                    if (enumerator.MoveNext())
-                    {
-                        int current = enumerator.Current;
-                        if (currentMaxPlayerID < current)
-                        {
-                            currentMaxPlayerID = current;
-                        }
-                        playerIDs.Remove(current);
-                        return current;
-                    }
-                }
-                if (currentMaxPlayerID < startIndex)
-                {
-                    currentMaxPlayerID = startIndex;
-                }
-                return startIndex;
+                empty++;
             }
-            if (currentMaxPlayerID < startIndex)
-            {
-                int key = startIndex;
-                while (socketLookupTable.ContainsKey(key))
-                {
-                    key++;
-                }
-                currentMaxPlayerID = key;
-                return key;
-            }
-            while (socketLookupTable.ContainsKey(currentMaxPlayerID))
-            {
-                currentMaxPlayerID++;
-            }
-            return currentMaxPlayerID;
+            return empty;
         }
 
-        private bool ValidClient(int id)
+        private bool ValidClient(byte id)
         {
             if (!socketLookupTable.ContainsKey(id) || socketLookupTable[id] == null || !socketLookupTable[id].Connected)
             {
@@ -391,7 +357,7 @@ namespace Gismo.Networking.Users
         {
             Log("Disposing of server");
             StopListening();
-            foreach (int key in socketLookupTable.Keys)
+            foreach (byte key in socketLookupTable.Keys)
             {
                 Disconnect(key);
             }
@@ -403,10 +369,10 @@ namespace Gismo.Networking.Users
 
         private struct PlayerConnection : IDisposable
         {
-            internal int playerIndex;
+            internal byte playerIndex;
             internal ByteBuffers buffers;
 
-            internal PlayerConnection(int index)
+            internal PlayerConnection(byte index)
             {
                 playerIndex = index;
                 buffers = new ByteBuffers

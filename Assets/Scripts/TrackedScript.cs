@@ -7,36 +7,44 @@ namespace Gismo
     public class TrackedScript : MonoBehaviour
     {
         [ReadOnly.ReadOnly]
-        [SerializeField] public int ID;
+        [SerializeField] public uint ID;
 
-        private static int currentID;
+        private static uint currentID;
+
+        [SerializeField] private bool autoRegisterID;
 
         public virtual void Start()
         {
+            if (autoRegisterID)
+            {
 #if UNITY_EDITOR
-            OnRegisterReady();
+                OnRegisterReady();
 #else
             Quip.NetGameController.Instance.onControllerIsReady += OnRegisterReady;
 #endif
+            }
         }
 
         public virtual void OnRegisterReady()
         {
-#if !UNITY_EDITOR
             Quip.NetGameController.Instance.RegisterTrackedScript(ID, this);
-#endif
         }
 
         public virtual Packet OnNewClient()
         {
-            return new Packet();
+            return Networking.NetworkStatics.EMPTY;
         }
         
         [ContextMenu("Generate ID")]
-        public void GenerateID()
+        public void GenerateID_EDITOR()
         {
             ID = currentID;
             currentID++;
+        }
+
+        public void GenerateID()
+        {
+            ID = Quip.NetGameController.Instance.GetNextTrackedID();
         }
 
         [ContextMenu("Reset ID")]
@@ -48,15 +56,20 @@ namespace Gismo
         public Packet GetPacketServer(Networking.NetworkPackets.ServerSentPackets s)
         {
             Packet p = new Packet(s);
-            p.WriteInt(ID);
+            p.WriteUint(ID);
 
             return p;
         }
 
-        public Packet GetPacketServer(Networking.NetworkPackets.ClientSentPackets s,int playerID)
+        public Packet GetPacketClient(Networking.NetworkPackets.ClientSentPackets s)
+        {
+            return GetPacketClient(s, Quip.NetGameController.Instance.GetUserID());
+        }
+
+        public Packet GetPacketClient(Networking.NetworkPackets.ClientSentPackets s, byte playerID)
         {
             Packet p = new Packet(s,playerID);
-            p.WriteInt(ID);
+            p.WriteUint(ID);
 
             return p;
         }

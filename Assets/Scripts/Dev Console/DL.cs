@@ -221,7 +221,7 @@ public class DL : MonoBehaviour
         updateMenu();
     }
 
-    private void StringSentToServer(Packet packet, int playerID)
+    private void StringSentToServer(Packet packet, byte playerID)
     {
         LogMsg($"Got {packet.ReadString()} from player {playerID}");
     }
@@ -245,9 +245,11 @@ public class DL : MonoBehaviour
         if (consoleUp && (Keyboard.current.numpadEnterKey.wasReleasedThisFrame || Keyboard.current.backquoteKey.wasReleasedThisFrame))
         {
             enterConsole(commandInput.text);
-            commandStack.add(commandInput.text);
+            commandStack.Add(commandInput.text);
+
             commandInput.text = "";
-            index = commandStack.getCount();
+
+            index = commandStack.GetCount();
 
             commandInput.ActivateInputField();
 
@@ -257,8 +259,8 @@ public class DL : MonoBehaviour
         if (consoleUp && Keyboard.current.downArrowKey.wasReleasedThisFrame)
         {
             index++;
-            index = Mathf.Clamp(index, 0, commandStack.getCount());
-            commandInput.text = commandStack.getItem(index);
+            index = Mathf.Clamp(index, 0, commandStack.GetCount());
+            commandInput.text = commandStack.GetItem(index);
             commandInput.caretPosition = commandInput.text.Length;
 
             commandInput.ActivateInputField();
@@ -268,8 +270,8 @@ public class DL : MonoBehaviour
         if (consoleUp && Keyboard.current.upArrowKey.IsPressed())
         {
             index--;
-            index = Mathf.Clamp(index, 0, commandStack.getCount());
-            commandInput.text = commandStack.getItem(index);
+            index = Mathf.Clamp(index, 0, commandStack.GetCount());
+            commandInput.text = commandStack.GetItem(index);
             commandInput.caretPosition = commandInput.text.Length;
 
             commandInput.ActivateInputField();
@@ -563,13 +565,13 @@ public class DL : MonoBehaviour
     {
         if (s.Length >= 2 && !NetGameController.Instance.IsConnected())
         {
-            if (s[1].ToLower() == "server")
+            if (s[1].ToLower() == "server" || s[1].ToLower() == "s")
             {
                 NetGameController.Instance.StartServer();
 
                 NetworkPackets.ServerFunctions.Add(NetworkPackets.ClientSentPackets.MSGSend, StringSentToServer);
             }
-            else if (s[1].ToLower() == "client")
+            else if (s[1].ToLower() == "client" || s[1].ToLower() == "c")
             {
                 string ip = "localHost";
                 if (s.Length >= 3)
@@ -642,6 +644,10 @@ public class DL : MonoBehaviour
                 else if(s[1].ToLower() == "connecttype")
                 {
                     Log(NetGameController.Instance.GetConnectionType().ToString());
+                }
+                else if(s[1].ToLower() == "start")
+                {
+                    NetGameController.Instance.BeginPlaySession();
                 }
                 else
                 {
@@ -756,39 +762,39 @@ public class CommandStack
         commands = new List<string>();
         maxStack = mStack;
     }
-    public int getCount()
+    public int GetCount()
     {
         return commands.Count;
     }
-    public string lastIn()
+    public string LastIn()
     {
         return commands[0];
     }
-    public string firstIn()
+    public string FirstIn()
     {
         return commands[commands.Count - 1];
     }
-    public void add(string s)
+    public void Add(string s)
     {
         if (!commands.Contains(s))
         {
             commands.Add(s);
             if (commands.Count > maxStack)
             {
-                removeAt(0);
+                RemoveAt(0);
             }
         }
     }
-    public bool remove(string s)
+    public bool Remove(string s)
     {
         return commands.Remove(s);
     }
-    public void removeAt(int s)
+    public void RemoveAt(int s)
     {
         commands.RemoveAt(s);
         commands.TrimExcess();
     }
-    public string getItem(int s)
+    public string GetItem(int s)
     {
         if (s > commands.Count - 1)
         {
