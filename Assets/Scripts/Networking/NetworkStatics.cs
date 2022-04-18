@@ -38,6 +38,7 @@ namespace Gismo.Networking
     }
     public class NetworkStatics
     {
+        public static byte ServerID = byte.MaxValue;
         public static int bufferSize = 2048;
 
         public static Core.Packet EMPTY;
@@ -63,11 +64,19 @@ namespace Gismo.Networking
     public class NetworkPackets
     {
         // Sent to the server from clients
-        public enum ClientSentPackets { MSGSend, ClientPosition, DepositLoseMineral, PickupMineral, MineralMineBegin, MineralCollected };
-
+        public enum ClientSentPackets { MSGSend, RoleChange, ClientAttack, CompressedSpawn, ClientPosition, DepositLoseMineral, MineralStateChange, MineralMineBegin, MineralCollected, PlayerInformationSend, SpecialAbiltyPlace,
+            CompressedMineralStateChange
+        }
         // Sent to a specific client from the server
-        public enum ServerSentPackets { FirstConnect ,MSGSend, PlayerTPRequest, GroupTPRequest,ClientPositionShare, PlayerDictionaryShare, MineralDepositInit, MineralSpawn, PickupMineral, MineralCollected };
-
+        public enum ServerSentPackets { FirstConnect , ClientAttack, RoleChange, CompressedSpawn, MSGSend, PlayerTPRequest, GroupTPRequest,ClientPositionShare, PlayerDictionaryShare, MineralDepositInit, MineralSpawn, MineralStateChange, MineralCollected, SpecialAbiltyPlace,
+            CompressedMineralStateChange,
+            MineralNodeFound,
+            EnemyMove,
+            EnemySpawn,
+            EnemyAttack,
+            PlayerHurt,
+            EnemyDamaged
+        }
         /// <summary>
         /// Server Function Dictionary that contains all functions that the server executes upon 
         /// Recieving a packet from a client

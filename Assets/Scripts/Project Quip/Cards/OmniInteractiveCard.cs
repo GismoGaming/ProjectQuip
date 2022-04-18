@@ -13,7 +13,7 @@ namespace Gismo.Quip.Cards
 
         [SerializeField] private TMPro.TextMeshProUGUI contextMessage;
 
-        [SerializeField] private PlayerController localPlayer;
+        private PlayerController localPlayer;
 
         [SerializeField] private float playerInteractionRange;
 
@@ -52,9 +52,7 @@ namespace Gismo.Quip.Cards
             OnCardMoving += MessageContext;
             contextMessage.text = "";
 
-#if UNITY_EDITOR
-            localPlayer = FindObjectOfType<PlayerController>();
-#else
+#if !UNITY_EDITOR
             NetGameController.Instance.onAssignedID += GetPlayer;
 #endif
             OnCardStartDrag += (() =>
@@ -69,7 +67,10 @@ namespace Gismo.Quip.Cards
             localPlayer = NetGameController.Instance.GetLocalPlayer();
         }
 #endif
-
+        public void SetPlayer(PlayerController p)
+        {
+            localPlayer = p;
+        }
         private void CheckContext(Vector3 position)
         {
             SetInteractionStuffs(false);
@@ -144,7 +145,7 @@ namespace Gismo.Quip.Cards
                             interactables.Add(interactionType, new List<IInteractable>());
                         }
 
-                        if (contextItems[interactionType].maxAmount != -1 && PlayerCentralization.Instance.pickedUpMineral.Count + interactables[interactionType].Count >= contextItems[interactionType].maxAmount)
+                        if (contextItems[interactionType].maxAmount != -1 && PlayerCentralization.Instance.GetListOfPickedUpMineralsCostDetails().Count + interactables[interactionType].Count >= contextItems[interactionType].maxAmount)
                             continue;
 
                         interactables[interactionType].Add(interaction);
@@ -169,15 +170,6 @@ namespace Gismo.Quip.Cards
                 type = mostInRange.Key,
                 interactions = mostInRange.Value
             };
-        }
-
-        private void OnDrawGizmosSelected()
-        {
-            if (localPlayer != null)
-            {
-                Gizmos.color = Color.Lerp(Color.blue, Color.clear, .5f);
-                Gizmos.DrawSphere(localPlayer.transform.position, playerInteractionRange);
-            }
         }
     }
 }

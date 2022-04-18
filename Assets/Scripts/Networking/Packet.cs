@@ -1,19 +1,17 @@
-﻿using System;
+﻿using Gismo.Quip;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 
 namespace Gismo.Networking.Core
 {
-    
-    
     public struct Packet : IDisposable
     {
         public byte[] rawData;
         public int readIndex;
-
-        public DateTime timeStamp;
 
         public string GetByteString()
         {
@@ -24,7 +22,6 @@ namespace Gismo.Networking.Core
         {
             rawData = new byte[5];
             readIndex = 0;
-            timeStamp = DateTime.Now;
 
             WriteInt((int)packetID);
             WriteByte(playerID);
@@ -34,7 +31,6 @@ namespace Gismo.Networking.Core
         {
             rawData = new byte[4];
             readIndex = 0;
-            timeStamp = DateTime.Now;
 
             WriteInt((int)packetID);
         }
@@ -43,12 +39,11 @@ namespace Gismo.Networking.Core
         {
             rawData = bytes;
             readIndex = 0;
-            timeStamp = DateTime.Now;
         }
 
         public int ReadPacketID()
         {
-            if(readIndex == 0)
+            if (readIndex == 0)
             {
                 return ReadInt();
             }
@@ -130,16 +125,12 @@ namespace Gismo.Networking.Core
 
         object ReadObject(bool moveIndex = true)
         {
-            if (readIndex + 4 > rawData.Length)
-            {
-                throw new Exception("Not enough space to read this type in the packet");
-            }
-            int count = BitConverter.ToInt32(rawData, readIndex);
+            int count = ReadInt();
             if (moveIndex)
                 readIndex += 4;
             if (count <= 0 || readIndex + count > rawData.Length)
             {
-                throw new Exception("Not enough space to read this type in the packet with it's data");
+                throw new Exception($"Not enough space to read this type in the packet with it's data {readIndex} + {count} > {rawData.Length}");
             }
             using (MemoryStream memoryStream = new MemoryStream())
             {
@@ -159,7 +150,7 @@ namespace Gismo.Networking.Core
                 throw new Exception("Not enough space to read this type in the packet");
             }
             int count = BitConverter.ToInt32(rawData, readIndex);
-            if(moveIndex)
+            if (moveIndex)
                 readIndex += 4;
             if (count <= 0 || readIndex + count > rawData.Length)
             {
@@ -174,20 +165,18 @@ namespace Gismo.Networking.Core
 
         public string ReadString(bool moveIndex = true)
         {
-            if (readIndex + 4 > rawData.Length)
-            {
-                throw new Exception("Not enough space to read this type in the packet");
-            }
-            int count = BitConverter.ToInt32(rawData, readIndex);
-            if (moveIndex)
-                readIndex += 4;
+            int count = ReadInt(moveIndex);
             if (count <= 0 || readIndex + count > rawData.Length)
             {
-                throw new Exception("Not enough space to read this type in the packet");
+                throw new Exception($"Not enough space to read this type in the packet {count}");
             }
             string str = Encoding.UTF8.GetString(rawData, readIndex, count);
-            if(moveIndex)
+            if (moveIndex)
                 readIndex += count;
+
+            if (str == "<[NULL]>")
+                return null;
+
             return str;
         }
 
@@ -198,7 +187,7 @@ namespace Gismo.Networking.Core
                 throw new Exception("Not enough space to read this type in the packet");
             }
             char character = BitConverter.ToChar(rawData, readIndex);
-            if(moveIndex)
+            if (moveIndex)
                 readIndex += 2;
             return character;
         }
@@ -210,7 +199,7 @@ namespace Gismo.Networking.Core
                 throw new Exception("Not enough space to read this type in the packet");
             }
             byte bit = rawData[readIndex];
-            if(moveIndex)
+            if (moveIndex)
                 readIndex++;
             return bit;
         }
@@ -232,11 +221,11 @@ namespace Gismo.Networking.Core
         {
             if (readIndex + 4 > rawData.Length)
             {
-                throw new Exception("Not enough space to read this type in the packet");
+                throw new Exception($"Not enough space to read this type in the packet {readIndex} + 4 > {rawData.Length}");
             }
             int integer = BitConverter.ToInt32(rawData, readIndex);
 
-            if(moveIndex)
+            if (moveIndex)
                 readIndex += 4;
             return integer;
         }
@@ -261,8 +250,8 @@ namespace Gismo.Networking.Core
                 throw new Exception("Not enough space to read this type in the packet");
             }
             float value = BitConverter.ToSingle(rawData, readIndex);
-            
-            if(moveIndex)
+
+            if (moveIndex)
                 readIndex += 4;
             return value;
         }
@@ -302,16 +291,81 @@ namespace Gismo.Networking.Core
             return (T)ReadObject();
         }
 
+        public Quip.Minerals.MineralCostDetails ReadCostDetails()
+        {
+            return new Quip.Minerals.MineralCostDetails()
+            {
+                name = ReadString(),
+                price = ReadFloat()
+            };
+        }
+
         public List<T> ReadList<T>()
         {
             int count = ReadInt();
             List<T> result = new List<T>();
 
-            for(int i  = 0; i < count; i++)
+            for (int i = 0; i < count; i++)
             {
-                result.Add((T)ReadObject());
+                result.Add(ReadGeneric<T>());
             }
             return result;
+        }
+
+        public List<Tracked2DPositionByted> ReadListTracked2DPositionByted()
+        {
+            int count = ReadInt();
+            List<Tracked2DPositionByted> result = new List<Tracked2DPositionByted>();
+
+            for (int i = 0; i < count; i++)
+            {
+                result.Add(ReadTracked2DPositionByted());
+            }
+            return result;
+        }
+
+        public Tracked2DPositionByted ReadTracked2DPositionByted()
+        {
+            return new Tracked2DPositionByted
+            {
+                id = ReadByte(),
+                position = ReadVector2()
+            };
+        }
+
+        public List<PlayerDictionaryElement> ReadListPlayerDictionaryElement()
+        {
+            int count = ReadInt();
+            List<PlayerDictionaryElement> result = new List<PlayerDictionaryElement>();
+
+            for (int i = 0; i < count; i++)
+            {
+                result.Add(ReadPlayerDictionaryElement());
+            }
+            return result;
+        }
+
+        public List<uint> ReadUintList()
+        {
+            int count = ReadInt();
+            List<uint> result = new List<uint>();
+
+            for (int i = 0; i < count; i++)
+            {
+                result.Add(ReadUint());
+            }
+            return result;
+        }
+
+        public PlayerDictionaryElement ReadPlayerDictionaryElement()
+        {
+            return new PlayerDictionaryElement
+            {
+                id = ReadByte(),
+                position = ReadVector2(),
+                role = ReadInt(),
+                username = ReadString(),
+            };
         }
 
         #endregion
@@ -320,7 +374,7 @@ namespace Gismo.Networking.Core
         public void WriteBlock(byte[] bytes)
         {
             CheckSize(bytes.Length);
-            Buffer.BlockCopy(bytes, 0,rawData, readIndex, bytes.Length);
+            Buffer.BlockCopy(bytes, 0, rawData, readIndex, bytes.Length);
             readIndex += bytes.Length;
         }
 
@@ -362,14 +416,11 @@ namespace Gismo.Networking.Core
         {
             if (value == null)
             {
-                throw new Exception("Please insert a value");
+                value = "<[NULL]>";
             }
-            else
-            {
-                byte[] bytes = Encoding.UTF8.GetBytes(value);
-                WriteInt(bytes.Length);
-                WriteBlock(bytes);
-            }
+            byte[] bytes = Encoding.UTF8.GetBytes(value);
+            WriteInt(bytes.Length);
+            WriteBlock(bytes);
         }
 
         public void WriteChar(char value)
@@ -428,6 +479,11 @@ namespace Gismo.Networking.Core
         {
             WriteObject(item);
         }
+        public void WriteCostDetails(Quip.Minerals.MineralCostDetails item)
+        {
+            WriteString(item.name);
+            WriteFloat(item.price);
+        }
 
         public void WriteList<T>(List<T> list)
         {
@@ -435,8 +491,52 @@ namespace Gismo.Networking.Core
 
             foreach (T item in list)
             {
-                WriteObject(item);
+                WriteGeneric(item);
             }
+        }
+        
+        public void WriteList(List<uint> items)
+        {
+            WriteInt(items.Count);
+
+            foreach (uint u in items)
+            {
+                WriteUint(u);
+            }
+        }
+        public void WriteList(List<PlayerDictionaryElement> items)
+        {
+            WriteInt(items.Count);
+
+            foreach (PlayerDictionaryElement e in items)
+            {
+                WritePlayerDictionaryElement(e);
+            }
+        }
+
+        public void WritePlayerDictionaryElement(PlayerDictionaryElement element)
+        {
+            WriteByte(element.id);
+            WriteVector2(element.position);
+            WriteInt(element.role);
+
+            WriteString(element.username);
+        }
+
+        public void WriteList(List<Tracked2DPositionByted> items)
+        {
+            WriteInt(items.Count);
+
+            foreach (Tracked2DPositionByted e in items)
+            {
+                WriteTracked2DPositionByted(e);
+            }
+        }
+
+        public void WriteTracked2DPositionByted(Tracked2DPositionByted element)
+        {
+            WriteByte(element.id);
+            WriteVector2(element.position);
         }
         #endregion
     }

@@ -145,15 +145,22 @@ namespace Gismo.EditorExtensions
 
                 bool buildSucced = true;
 
+                bool containsWindows = false;
+
                 foreach (BuildTargets buildRequests in GetSelectedTargets(target))
                 {
-                    if(!InitalizeNCreateBuild(path, buildRequests))
+                    if (buildRequests == BuildTargets.Windows)
+                    {
+                        containsWindows = true;
+                    }
+                    
+                    if (!InitalizeNCreateBuild(path, buildRequests))
                     {
                         buildSucced = false;
                     }
                 }
 
-                if (buildSucced)
+                if (containsWindows && buildSucced)
                 {
                     if (buildCount > 0)
                     {

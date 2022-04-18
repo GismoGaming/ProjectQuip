@@ -6,13 +6,40 @@
             "id": "08eb8748-3eb2-4c1a-9164-5a7fc8ab6a9f",
             "actions": [
                 {
-                    "name": "Card Interaction",
+                    "name": "Card Pickup",
                     "type": "Button",
                     "id": "f17804ef-1212-4e62-9b90-0f8bc23462f4",
                     "expectedControlType": "Button",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Card Cancel",
+                    "type": "Button",
+                    "id": "569a55e5-01ea-4d33-8041-093eee7d4909",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Attack",
+                    "type": "Button",
+                    "id": "d0338efa-1cce-4921-b987-59101374ad4f",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Card Position",
+                    "type": "PassThrough",
+                    "id": "9bd1c071-880f-4793-85d2-6d250e6e8895",
+                    "expectedControlType": "Vector2",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
                 }
             ],
             "bindings": [
@@ -23,7 +50,40 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
-                    "action": "Card Interaction",
+                    "action": "Card Pickup",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "37c85f02-4e21-47a8-8c92-23d05c668e9d",
+                    "path": "<Mouse>/rightButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Card Cancel",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "7d34da38-a907-4d53-ab8e-aba71f999cf5",
+                    "path": "<Keyboard>/space",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Attack",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "4e34e857-fefc-4ddc-87dd-a24e495f6f1b",
+                    "path": "<Mouse>/position",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Card Position",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

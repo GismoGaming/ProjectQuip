@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Random = UnityEngine.Random;
+using UnityEngine.SceneManagement;
 
 namespace Gismo
 {
@@ -59,7 +60,7 @@ namespace Gismo
     }
 
     public static class ClassExtensions
-    {
+    { 
         public static Vector2 ToVector2(this Vector3 input)
         {
             return new Vector2(input.x, input.y);
@@ -97,6 +98,21 @@ namespace Gismo
             return self[Random.Range(lowerBound, self.Count - 1 - upperBound)];
         }
 
+        public static T GetRandomItem<T>(this T[] self, int lowerBound = 0, int upperBound = 0)
+        {
+            return self[Random.Range(lowerBound, self.Length - 1 - upperBound)];
+        }
+
+        public static K GetRandomKey<K,V>(this Tools.VisualDictionary<K,V> self, int lowerBound = 0, int upperBound = 0)
+        {
+            return self.elements.GetRandomItem(lowerBound, upperBound).key;
+        }
+
+        public static V GetRandomValue<K, V>(this Tools.VisualDictionary<K, V> self, int lowerBound = 0, int upperBound = 0)
+        {
+            return self.GetAllItems().GetRandomItem(lowerBound,upperBound).value;
+        }
+
         public static Rect GetGlobalPosition(this RectTransform rect)
         {
             Vector3[] corners = new Vector3[4];
@@ -116,6 +132,14 @@ namespace Gismo
     }
     public class StaticFunctions
     {
+#if UNITY_EDITOR
+        public static void MoveToMainScene(GameObject go)
+        {
+            Scene main = SceneManager.GetSceneByBuildIndex(0);
+            SceneManager.MoveGameObjectToScene(go, main);
+        }
+#endif
+
         public static Vector2 RandomOnUnitCircle(float radius)
         {
             return Random.insideUnitCircle.normalized * radius;
@@ -125,7 +149,7 @@ namespace Gismo
             Vector3[] corners = new Vector3[4];
 
             rect.GetWorldCorners(corners);
-            
+
             int visibleCorners = 0;
             Rect screenRect = new Rect(0f, 0f, Screen.width, Screen.height);
 
@@ -145,7 +169,7 @@ namespace Gismo
         }
         public static Color GetRandomColor(bool doAlpha = false)
         {
-            if(doAlpha)
+            if (doAlpha)
                 return new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
             else
                 return new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f));
@@ -177,6 +201,15 @@ namespace Gismo
             {
                 return false;
             }
+        }
+
+        public static bool IsStruct<T>()
+        {
+            return typeof(T).IsValueType && !typeof(T).IsEnum;
+        }
+        public static bool IsClass<T>()
+        {
+            return typeof(T).IsClass;
         }
     }
 }

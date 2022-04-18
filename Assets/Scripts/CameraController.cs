@@ -51,9 +51,9 @@ namespace Gismo.Quip
 
             if (Mouse.current.rightButton.IsPressed())
             {
-                if (cameraBounds.Contains(transform.position.ToVector2() + (lastDragPosition - Mouse.current.position.ReadValue()) * Time.deltaTime * dragSensitivity))
+                if (cameraBounds.Contains(transform.position.ToVector2() + dragSensitivity * Time.deltaTime * (lastDragPosition - Mouse.current.position.ReadValue())))
                 {
-                    transform.Translate((lastDragPosition - Mouse.current.position.ReadValue()) * Time.deltaTime * dragSensitivity);
+                    transform.Translate(dragSensitivity * Time.deltaTime * (lastDragPosition - Mouse.current.position.ReadValue()));
                     lastDragPosition = Mouse.current.position.ReadValue();
                 }
             }

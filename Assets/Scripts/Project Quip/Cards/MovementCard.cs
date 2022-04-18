@@ -13,11 +13,11 @@ namespace Gismo.Quip.Cards
 
         public override void Awake()
         {
-            OnCardDroped += PrepairPacket;
+            OnCardDroped += PlaceDownFlag;
             base.Awake();
         }
 
-        public void PrepairPacket(Vector3 position)
+        public void PlaceDownFlag(Vector3 position)
         {
             flag.transform.position = position;
             if (Vector3.Distance(flag.transform.position, lastKnown) < minMoveDistance)

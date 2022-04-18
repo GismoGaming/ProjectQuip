@@ -33,8 +33,6 @@ namespace Gismo.Networking.Users
 
             clientID = byte.MaxValue;
 
-            NetworkPackets.ClientFunctions.Add(NetworkPackets.ServerSentPackets.FirstConnect, RecievePlayerID);
-
             if (selfSocket != null)
                 return;
             buffers = new ByteBuffers();
@@ -182,21 +180,6 @@ namespace Gismo.Networking.Users
             {
                 Log("Net ERROR: ConnectionForciblyClosedException");
                 Disconnect();
-            }
-        }
-
-        public void RecievePlayerID(Core.Packet packet)
-        {
-            if (clientID == byte.MaxValue)
-            {
-                clientID = packet.ReadByte();
-                Log($"Got a player ID of {clientID}");
-
-                onClientConnected?.Invoke(clientID);
-            }
-            else
-            {
-                Log($"Got duplicate player id packet of {packet.ReadInt()}, even though we have been set up correctly | {clientID} | {packet.timeStamp.Second} ");
             }
         }
 

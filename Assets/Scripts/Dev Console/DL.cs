@@ -18,7 +18,7 @@ public class Dev
 {
     public enum DebugLogType { normal, error, blue, italics }
     public static bool noClipEnabled;
-    public static string devFileLocation = Application.dataPath +  "/Dev";
+    public static string devFileLocation = Application.dataPath + "/Dev";
     public enum DebugLevel { Off, Low, Medium, High };
 
     public static DebugLevel debugLevel = DebugLevel.High;
@@ -38,7 +38,7 @@ public class DL : MonoBehaviour
 {
     public static DL instance;
     [Header("Main Console Stuffs")]
-    bool consoleUp = false;
+    public static bool DLUp = false;
 
     [SerializeField] private TMP_InputField commandInput;
     [SerializeField] private TextMeshProUGUI outputLog;
@@ -96,10 +96,10 @@ public class DL : MonoBehaviour
             Directory.CreateDirectory(Dev.devFileLocation);
         }
 
-        if (!Directory.Exists(Path.Combine(Dev.devFileLocation , "/DevPhotos/")))
-        {
-            Directory.CreateDirectory(Path.Combine(Dev.devFileLocation,"/DevPhotos/"));
-        }
+        //if (!Directory.Exists(Path.Combine(Dev.devFileLocation, "/DevPhotos/")))
+        //{
+        //    Directory.CreateDirectory(Path.Combine(Dev.devFileLocation, "/DevPhotos/"));
+        //}
         Application.targetFrameRate = 60;
     }
 
@@ -145,6 +145,7 @@ public class DL : MonoBehaviour
         PopulateEditorActions("psr", f_palleteSwap, "Random Pallete Swap", "Randomize pallete on object", HelpListDetail.max);
         PopulateEditorActions("netconnect", f_netConnect, "Networking Connection", "Connects to network as either client or server", HelpListDetail.min);
         PopulateEditorActions("net", f_net, "Networking", "Useful networking commands", HelpListDetail.max);
+        PopulateEditorActions("name", f_netUsername, "Username", "Setting and logging of username", HelpListDetail.max);
     }
 
     public void LogMsg(string msg, Dev.DebugLogType flagType)
@@ -218,6 +219,8 @@ public class DL : MonoBehaviour
     {
         commandStack = new CommandStack(maxCommandsInStack);
         f_clear(null);
+
+        username = NetGameController.Instance.GetRandomUserName();
         updateMenu();
     }
 
@@ -231,32 +234,37 @@ public class DL : MonoBehaviour
         LogMsg($"Got {packet.ReadString()} from server");
     }
 
+    void ClearCommandInput()
+    {
+        commandInput.text = "";
+
+        index = commandStack.GetCount();
+
+        commandInput.ActivateInputField();
+
+        commandInput.Select();
+    }
+
     void Update()
     {
         if (Keyboard.current.f1Key.wasReleasedThisFrame || Keyboard.current.slashKey.wasReleasedThisFrame)
         {
-            consoleUp = !consoleUp;
+            DLUp = !DLUp;
             commandInput.Select();
             updateMenu();
 
             commandInput.Select();
         }
 
-        if (consoleUp && (Keyboard.current.numpadEnterKey.wasReleasedThisFrame || Keyboard.current.backquoteKey.wasReleasedThisFrame))
+        if (DLUp && Keyboard.current.enterKey.wasReleasedThisFrame)
         {
-            enterConsole(commandInput.text);
             commandStack.Add(commandInput.text);
 
-            commandInput.text = "";
-
-            index = commandStack.GetCount();
-
-            commandInput.ActivateInputField();
-
-            commandInput.Select();
+            enterConsole(commandInput.text);
+            ClearCommandInput();
         }
 
-        if (consoleUp && Keyboard.current.downArrowKey.wasReleasedThisFrame)
+        if (DLUp && Keyboard.current.downArrowKey.wasReleasedThisFrame)
         {
             index++;
             index = Mathf.Clamp(index, 0, commandStack.GetCount());
@@ -267,7 +275,7 @@ public class DL : MonoBehaviour
 
             commandInput.Select();
         }
-        if (consoleUp && Keyboard.current.upArrowKey.IsPressed())
+        if (DLUp && Keyboard.current.upArrowKey.IsPressed())
         {
             index--;
             index = Mathf.Clamp(index, 0, commandStack.GetCount());
@@ -278,21 +286,27 @@ public class DL : MonoBehaviour
 
             commandInput.Select();
         }
-        if (Keyboard.current.leftShiftKey.IsPressed() && Keyboard.current.tabKey.IsPressed())
+
+        if(Keyboard.current.backspaceKey.wasReleasedThisFrame && Keyboard.current.leftCtrlKey.isPressed)
         {
-            if (!Directory.Exists(Dev.devFileLocation + "/DevPhotos/"))
-            {
-                Directory.CreateDirectory(Dev.devFileLocation + "/DevPhotos/");
-            }
-            string fileLocation = Dev.devFileLocation + "/DevPhotos/" + DateTime.Now.Millisecond + ".png";
-            ScreenCapture.CaptureScreenshot(fileLocation, screenCaptureSS);
-            LogMsg($"Took picture: {fileLocation}", Dev.DebugLogType.italics);
+            ClearCommandInput();
         }
+
+        //if (Keyboard.current.leftShiftKey.IsPressed() && Keyboard.current.tabKey.IsPressed())
+        //{
+        //    if (!Directory.Exists(Dev.devFileLocation + "/DevPhotos/"))
+        //    {
+        //        Directory.CreateDirectory(Dev.devFileLocation + "/DevPhotos/");
+        //    }
+        //    string fileLocation = Dev.devFileLocation + "/DevPhotos/" + DateTime.Now.Millisecond + ".png";
+        //    ScreenCapture.CaptureScreenshot(fileLocation, screenCaptureSS);
+        //    LogMsg($"Took picture: {fileLocation}", Dev.DebugLogType.italics);
+        //}
     }
 
     void updateMenu()
     {
-        if (consoleUp)
+        if (DLUp)
         {
             mainConsole.SetActive(true);
 
@@ -567,27 +581,66 @@ public class DL : MonoBehaviour
         {
             if (s[1].ToLower() == "server" || s[1].ToLower() == "s")
             {
+                NetGameController.Instance.onControllerIsReady += () =>
+                {
+                    NetGameController.Instance.GetLocalPlayer().SetUserName(username);
+                };
+
                 NetGameController.Instance.StartServer();
 
                 NetworkPackets.ServerFunctions.Add(NetworkPackets.ClientSentPackets.MSGSend, StringSentToServer);
             }
             else if (s[1].ToLower() == "client" || s[1].ToLower() == "c")
             {
-                string ip = "localHost";
-                if (s.Length >= 3)
+                NetGameController.Instance.onAssignedID += () =>
                 {
-                    ip = GetString("localHost", s, 2);
-                }
+                    NetGameController.Instance.GetLocalPlayer().SetUserName(username);
+                    Packet usernamePacket = new Packet(NetworkPackets.ClientSentPackets.PlayerInformationSend, NetGameController.Instance.GetUserID());
 
-                Log(ip);
+                    usernamePacket.WriteString(username);
 
-                NetGameController.Instance.StartClient(ip);
+                    NetGameController.Instance.SendData_C(usernamePacket);
+                };
 
+                NetGameController.Instance.StartClient(GetString("localhost", s, 2));
                 NetworkPackets.ClientFunctions.Add(NetworkPackets.ServerSentPackets.MSGSend, StringSentToClient);
             }
             else
             {
                 LogMsg($"Command {s[1]} not found");
+            }
+        }
+    }
+
+    string username;
+    void f_netUsername(string[] s)
+    {
+        if (s.Length >= 2)
+        {
+            switch (s[1].ToLower())
+            {
+                case "set":
+                    username = GetString(username, s, 2);
+                    Log($"Your username is now \"{username}\"");
+
+                    NetGameController.Instance.GetLocalPlayer().SetUserName(username);
+
+                    if (NetGameController.Instance.IsConnectedAs(ConnectionType.Client))
+                    {
+                        Packet usernamePacket = new Packet(NetworkPackets.ClientSentPackets.PlayerInformationSend, NetGameController.Instance.GetUserID());
+
+                        usernamePacket.WriteString(username);
+
+                        NetGameController.Instance.SendData_C(usernamePacket);
+                    }
+                    else
+                    {
+                        NetGameController.Instance.SendDataToAll_S(NetGameController.Instance.GetClientArrayPacket());
+                    }
+                    break;
+                case "show":
+                    Log(username);
+                    break;
             }
         }
     }
@@ -598,60 +651,124 @@ public class DL : MonoBehaviour
         {
             if (s.Length >= 2)
             {
-                if (s[1].ToLower() == "msg")
+                switch (s[1].ToLower())
                 {
-                    if (NetGameController.Instance.GetConnectionType() == ConnectionType.Server)
-                    {
-                        Packet packet = new Packet(NetworkPackets.ServerSentPackets.MSGSend);
+                    case "msg":
+                        {
+                            if (NetGameController.Instance.GetConnectionType() == ConnectionType.Server)
+                            {
+                                Packet packet = new Packet(NetworkPackets.ServerSentPackets.MSGSend);
 
-                        string resultingString = GetString("PING!", s, 2);
+                                string resultingString = GetString("PING!", s, 2);
 
-                        packet.WriteString(resultingString);
+                                packet.WriteString(resultingString);
 
-                        NetGameController.Instance.SendDataToAll_S(packet);
+                                NetGameController.Instance.SendDataToAll_S(packet);
 
-                        LogMsg($"\"{resultingString}\"Ping sent to clients");
-                    }
-                    else if (NetGameController.Instance.GetConnectionType() == ConnectionType.Client)
-                    {
-                        Packet packet = new Packet(NetworkPackets.ClientSentPackets.MSGSend, NetGameController.Instance.GetUserID());
+                                LogMsg($"\"{resultingString}\"Ping sent to clients");
+                            }
+                            else if (NetGameController.Instance.GetConnectionType() == ConnectionType.Client)
+                            {
+                                Packet packet = new Packet(NetworkPackets.ClientSentPackets.MSGSend, NetGameController.Instance.GetUserID());
 
-                        string resultingString = GetString("PING!", s, 2);
-                        packet.WriteString(resultingString);
+                                string resultingString = GetString("PING!", s, 2);
+                                packet.WriteString(resultingString);
 
-                        NetGameController.Instance.SendData_C(packet);
-                        LogMsg($"\"{resultingString}\"Ping sent to server");
-                    }
-                }
-                else if (s[1].ToLower() == "id")
-                {
-                    Log($"Your player ID is {NetGameController.Instance.GetUserID()}");
-                }
-                else if(s[1].ToLower() == "debug")
-                {
-                    NetGameController.Instance.DoDebug = !NetGameController.Instance.DoDebug;
+                                NetGameController.Instance.SendData_C(packet);
+                                LogMsg($"\"{resultingString}\"Ping sent to server");
+                            }
 
-                    LogMsg($"NetGameController -> {NetGameController.Instance.DoDebug}");
-                }
-                else if(s[1].ToLower() == "cidd")
-                {
-                    Log(NetGameController.Instance.f_gnetHelper());
-                }
-                else if(s[1].ToLower() == "disconnect")
-                {
-                    NetGameController.Instance.Disconnect();
-                }
-                else if(s[1].ToLower() == "connecttype")
-                {
-                    Log(NetGameController.Instance.GetConnectionType().ToString());
-                }
-                else if(s[1].ToLower() == "start")
-                {
-                    NetGameController.Instance.BeginPlaySession();
-                }
-                else
-                {
-                    LogMsg($"Command {s[1]} not found");
+                            break;
+                        }
+
+                    case "id":
+                        Log($"Your player ID is {NetGameController.Instance.GetUserID()}");
+                        break;
+                    case "debug":
+                        NetGameController.Instance.DoDebug = !NetGameController.Instance.DoDebug;
+
+                        LogMsg($"NetGameController -> {NetGameController.Instance.DoDebug}");
+                        break;
+                    case "cidd":
+                        Log(NetGameController.Instance.f_gnetHelper());
+                        break;
+                    case "disconnect":
+                        NetGameController.Instance.Disconnect();
+                        break;
+                    case "connecttype":
+                        Log(NetGameController.Instance.GetConnectionType().ToString());
+                        break;
+                    case "start":
+                        NetGameController.Instance.BeginPlaySession();
+                        break;
+                    case "role":
+                        if (s.Length >= 3)
+                        {
+                            NetGameController.Instance.SetUserRole((Role)int.Parse(s[2]));
+
+                            Log($"Player has gotten new role: {PlayerCentralization.Instance.playerRole}");
+                        }
+                        break;
+                    case "where":
+                        if (s.Length == 3)
+                        {
+                            if (uint.TryParse(s[2], out uint id))
+                            {
+                                if (NetGameController.Instance.GetTrackedScript(id) != null)
+                                {
+                                    Log($"{id} is at {NetGameController.Instance.GetTrackedScript(id).transform.position}");
+                                }
+                                else
+                                {
+                                    Log($"There is no script with {id} as it's ID");
+                                }
+                            }
+                            else
+                            {
+                                Log($"Error reading id");
+                            }
+                        }
+                        else
+                        {
+                            Log($"Please insert and ID to search for");
+                        }
+                        break;
+                    case "tostring":
+                        if (s.Length == 3)
+                        {
+                            if (uint.TryParse(s[2], out uint id))
+                            {
+                                if (NetGameController.Instance.GetTrackedScript(id) != null)
+                                {
+                                    Log($"{NetGameController.Instance.GetTrackedScript(id)}");
+                                }
+                                else
+                                {
+                                    Log($"There is no script with {id} as it's ID");
+                                }
+                            }
+                            else
+                            {
+                                Log($"Error reading id");
+                            }
+                        }
+                        else
+                        {
+                            Log($"Please insert and ID to search for");
+                        }
+                        break;
+                    case "tracked":
+                        NetGameController.Instance.GetTrackedIDs();
+                        break;
+                    case "ip":
+                        if(NetGameController.Instance.IsConnectedAs(ConnectionType.Server))
+                        {
+                            LogMsg($"Your ip, for others to connect to is: {NetGameController.Instance.GetIps()}");
+                        }
+                        break;
+                    default:
+                        LogMsg($"Command {s[1]} not found");
+                        break;
                 }
             }
         }
@@ -661,7 +778,7 @@ public class DL : MonoBehaviour
         }
     }
 
-    #endregion
+#endregion
     public static void SelfPrint(string msg, int flag = 0)
     {
         instance.LogMsg(msg, flag);
@@ -684,7 +801,7 @@ public class DL : MonoBehaviour
 
     public string GetString(string startingValue, string[] s, int startIndex = 1)
     {
-        if (s.Length < 2)
+        if (s.Length < 1+startIndex)
         {
             return startingValue;
         }

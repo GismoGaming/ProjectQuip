@@ -39,8 +39,17 @@ namespace Gismo.Quip.Cards
 
         private float zOffset;
 
+        private InputActionMap action;
+
         public virtual void Awake()
         {
+            action = PlayerInput.GetPlayerByIndex(0).currentActionMap;
+            rect = GetComponent<RectTransform>();
+
+            startSize = rect.sizeDelta;
+            changedSize = startSize * sizeChange;
+
+            homePosition = rect.position;
             mainCamera = Camera.main;
         }
 
@@ -49,24 +58,19 @@ namespace Gismo.Quip.Cards
             return mainCamera.ScreenToWorldPoint(transform.position).ChangeZ(zOffset);
         }
 
-        void Start()
+        public virtual bool CanPickup()
         {
-            rect = GetComponent<RectTransform>();
-
-            startSize = rect.sizeDelta;
-            changedSize = startSize * sizeChange;
-
-            homePosition = rect.position;
+            return rect.IsInsideRect(action["Card Position"].ReadValue<Vector2>());
         }
 
         void Update()
         {
             if (!isDragging)
             {
-                if (rect.IsInsideRect(Mouse.current.position.ReadValue()) && Mouse.current.leftButton.wasPressedThisFrame)
+                if (CanPickup() && action["Card Pickup"].WasPressedThisFrame())
                 {
                     isDragging = true;
-                    lastPosition = Mouse.current.position.ReadValue();
+                    lastPosition = action["Card Position"].ReadValue<Vector2>();
 
                     rect.SetParent(outsideRect);
 
@@ -80,14 +84,14 @@ namespace Gismo.Quip.Cards
             {
                 lastPosition = rect.position;
 
-                rect.position = Mouse.current.position.ReadValue();
+                rect.position = action["Card Position"].ReadValue<Vector2>();
 
                 if (!StaticFunctions.IsRectWithinScreen(rect))
                 {
                     rect.position = lastPosition;
                 }
 
-                if (Mouse.current.leftButton.wasReleasedThisFrame)
+                if (action["Card Pickup"].WasReleasedThisFrame())
                 {
                     isDragging = false;
 
@@ -105,7 +109,7 @@ namespace Gismo.Quip.Cards
                     }
                 }
 
-                if (Mouse.current.rightButton.wasPressedThisFrame)
+                if (action["Card Cancel"].WasReleasedThisFrame())
                 {
                     isDragging = false;
 

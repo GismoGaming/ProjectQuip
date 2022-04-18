@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Gismo.Tools
 {
     [Serializable]
-    class VisualDictionary<K,V>
+    public class VisualDictionary<K,V>
     {
         [System.Serializable]
         public struct VisualDictionaryElement

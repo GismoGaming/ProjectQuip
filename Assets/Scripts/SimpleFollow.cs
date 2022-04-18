@@ -12,6 +12,9 @@ namespace Gismo.Generic
 
         void Start()
         {
+#if UNITY_EDITOR
+            StaticFunctions.MoveToMainScene(gameObject);
+#endif
             transform.position = target.position + offset;
         }
 

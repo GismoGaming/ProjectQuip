@@ -47,7 +47,7 @@ namespace Gismo.Networking.Users
             listenerSocket.Listen(NetworkStatics.maxServerConnections);
             listenerSocket.BeginAccept(new AsyncCallback(DoAcceptClient), byte.MinValue);
 
-            onServerUp?.Invoke(byte.MaxValue);
+            onServerUp?.Invoke(NetworkStatics.ServerID);
 
             Log($"Started Server on port {NetworkStatics.portNumberTCP}, with max connections {NetworkStatics.maxServerConnections}");
         }
@@ -91,13 +91,11 @@ namespace Gismo.Networking.Users
 
             BeginReceiveData(emptySlot);
 
+            if (currentMaxPlayerID <= emptySlot)
+                currentMaxPlayerID = emptySlot;
+
             Core.GismoThreading.ExecuteInNormalUpdate(() =>
             {
-                Core.Packet idPacket = new Core.Packet(NetworkPackets.ServerSentPackets.FirstConnect);
-                idPacket.WriteByte(emptySlot);
-
-                SendDataTo(emptySlot, idPacket);
-
                 onClientConnected?.Invoke(emptySlot);
             });
 
@@ -187,7 +185,7 @@ namespace Gismo.Networking.Users
                     typeof(NetworkPackets.ClientSentPackets), 
                     packet.ReadPacketID()
                     );
-                //Log($"Got packet of {packetID}");
+                Log($"Got packet of {packetID}");
 
                 if (NetworkPackets.ServerFunctions.ContainsKey(packetID))
                 {
@@ -277,7 +275,12 @@ namespace Gismo.Networking.Users
 
         public string GetIPv4()
         {
-            return Dns.GetHostEntry(Dns.GetHostName()).AddressList[0].ToString();
+            foreach(IPAddress ip in Dns.GetHostEntry(Dns.GetHostName()).AddressList)
+            {
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                    return ip.ToString();
+            }
+            return null;
         }
 
         public string ClientIp(byte index)
