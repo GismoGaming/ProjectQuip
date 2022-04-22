@@ -1,5 +1,8 @@
 ﻿using Gismo.Networking.Core;
 using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using Gismo.Networking;
 
 namespace Gismo.Quip.RoleSpecific
 {
@@ -7,9 +10,45 @@ namespace Gismo.Quip.RoleSpecific
     {
         Vector3 startScale;
 
+        [SerializeField] private float attackRange;
+        [SerializeField] private float attackRate;
+
         void Awake()
         {
             startScale = transform.localScale;
+
+            if(NetGameController.Instance.IsConnectedAs(ConnectionType.Server))
+            {
+                StartCoroutine(FireUpdate());
+            }
+        }
+
+        IEnumerator FireUpdate()
+        {
+            yield return new WaitForSeconds(attackRate);
+
+            DoAttack();
+
+            StartCoroutine(FireUpdate());
+        }
+
+        void DoAttack()
+        {
+            foreach (Enemies.Enemy enemy in FindObjectsOfType<Enemies.Enemy>())
+            {
+                if (Vector3.Distance(transform.position, enemy.transform.position) <= attackRange)
+                {
+                    enemy.DoDamage();
+                    Packet p = new Packet(NetworkPackets.ServerSentPackets.EnemyDamaged);
+                    List<uint> s = new List<uint>();
+                    s.Add(enemy.ID);
+                    p.WriteList(s);
+
+                    NetGameController.Instance.SendDataToAll_S(p);
+
+                    return;
+                }
+            }
         }
 
         public override void OnPlacedDownPacket()

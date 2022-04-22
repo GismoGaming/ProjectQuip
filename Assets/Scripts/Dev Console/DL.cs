@@ -581,29 +581,15 @@ public class DL : MonoBehaviour
         {
             if (s[1].ToLower() == "server" || s[1].ToLower() == "s")
             {
-                NetGameController.Instance.onControllerIsReady += () =>
-                {
-                    NetGameController.Instance.GetLocalPlayer().SetUserName(username);
-                };
+                NetBooter.ip = GetString(Gismo.StaticFunctions.GetLocalIPAddress(), s, 2);
 
-                NetGameController.Instance.StartServer();
-
-                NetworkPackets.ServerFunctions.Add(NetworkPackets.ClientSentPackets.MSGSend, StringSentToServer);
+                NetBooter.Instance.StartServer();
             }
             else if (s[1].ToLower() == "client" || s[1].ToLower() == "c")
             {
-                NetGameController.Instance.onAssignedID += () =>
-                {
-                    NetGameController.Instance.GetLocalPlayer().SetUserName(username);
-                    Packet usernamePacket = new Packet(NetworkPackets.ClientSentPackets.PlayerInformationSend, NetGameController.Instance.GetUserID());
+                NetBooter.ip = GetString(Gismo.StaticFunctions.GetLocalIPAddress(), s, 2);
 
-                    usernamePacket.WriteString(username);
-
-                    NetGameController.Instance.SendData_C(usernamePacket);
-                };
-
-                NetGameController.Instance.StartClient(GetString("localhost", s, 2));
-                NetworkPackets.ClientFunctions.Add(NetworkPackets.ServerSentPackets.MSGSend, StringSentToClient);
+                NetBooter.Instance.StartClient();
             }
             else
             {
@@ -653,34 +639,7 @@ public class DL : MonoBehaviour
             {
                 switch (s[1].ToLower())
                 {
-                    case "msg":
-                        {
-                            if (NetGameController.Instance.GetConnectionType() == ConnectionType.Server)
-                            {
-                                Packet packet = new Packet(NetworkPackets.ServerSentPackets.MSGSend);
-
-                                string resultingString = GetString("PING!", s, 2);
-
-                                packet.WriteString(resultingString);
-
-                                NetGameController.Instance.SendDataToAll_S(packet);
-
-                                LogMsg($"\"{resultingString}\"Ping sent to clients");
-                            }
-                            else if (NetGameController.Instance.GetConnectionType() == ConnectionType.Client)
-                            {
-                                Packet packet = new Packet(NetworkPackets.ClientSentPackets.MSGSend, NetGameController.Instance.GetUserID());
-
-                                string resultingString = GetString("PING!", s, 2);
-                                packet.WriteString(resultingString);
-
-                                NetGameController.Instance.SendData_C(packet);
-                                LogMsg($"\"{resultingString}\"Ping sent to server");
-                            }
-
-                            break;
-                        }
-
+                    
                     case "id":
                         Log($"Your player ID is {NetGameController.Instance.GetUserID()}");
                         break;
@@ -763,7 +722,7 @@ public class DL : MonoBehaviour
                     case "ip":
                         if(NetGameController.Instance.IsConnectedAs(ConnectionType.Server))
                         {
-                            LogMsg($"Your ip, for others to connect to is: {NetGameController.Instance.GetIps()}");
+                            LogMsg($"Your ip, for others to connect to is: {Gismo.StaticFunctions.GetLocalIPAddress()}");
                         }
                         break;
                     default:
@@ -810,6 +769,8 @@ public class DL : MonoBehaviour
         {
             result += s[i] + " ";
         }
+
+        result.Trim();
         return result;
     }
 

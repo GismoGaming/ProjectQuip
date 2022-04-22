@@ -18,7 +18,7 @@ namespace Gismo.Quip
         [HideInInspector]
         public bool localPlayer;
 
-        [SerializeField] TextMeshProUGUI debugText;
+        [SerializeField] TextMeshProUGUI usernameText;
 
         private Vector2 lastKnown;
 
@@ -34,6 +34,8 @@ namespace Gismo.Quip
         private CameraController cameraController;
 
         [SerializeField] private GameObject localPlayerIndicator;
+
+        [SerializeField] private Sprite[] roleSprites;
 
         private float zPos;
 
@@ -67,7 +69,7 @@ namespace Gismo.Quip
 
             username = s;
 
-            UpdateDebug();
+            UpdateUserFloatingText();
         }
         public byte GetControllingPlayer()
         {
@@ -79,13 +81,15 @@ namespace Gismo.Quip
             {
                 Cards.SpecialCard.Instance.UpdateElement(newRole);
             }
+
+            GetComponent<SpriteRenderer>().sprite = roleSprites[(int)newRole];
             playerRole = newRole;
-            UpdateDebug();
+            UpdateUserFloatingText();
         }
 
-        public void UpdateDebug()
+        public void UpdateUserFloatingText()
         {
-            debugText.text = $"{username}: {playerRole}";
+            usernameText.text = $"{username}: {playerRole}";
         }
 
 #if UNITY_EDITOR

@@ -1,43 +1,43 @@
 fileFormatVersion: 2
-guid: 6204b3d800778c34ca52765cd7142eaf
+guid: 1cf50e168e2e4074c8985884d8f5e2b5
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -8441684040589551652
-    second: Spider_3_0
+      213: 5878394753050435708
+    second: Eyeball_1_0
   - first:
-      213: -6645571965756803048
-    second: Spider_3_1
+      213: 4380140160401377318
+    second: Eyeball_1_1
   - first:
-      213: 561147385193972938
-    second: Spider_3_2
+      213: -4944659908590179335
+    second: Eyeball_1_2
   - first:
-      213: 7124410667579881025
-    second: Spider_3_3
+      213: -8777947666866633616
+    second: Eyeball_1_3
   - first:
-      213: 5116414747155937791
-    second: Spider_3_4
+      213: 5061044079696135185
+    second: Eyeball_1_4
   - first:
-      213: 3934362287881910902
-    second: Spider_3_5
+      213: 5628308709581299278
+    second: Eyeball_1_5
   - first:
-      213: 5889633799025541794
-    second: Spider_3_6
+      213: -664875769933579144
+    second: Eyeball_1_6
   - first:
-      213: -6840546242095996571
-    second: Spider_3_7
+      213: 4786978390608692809
+    second: Eyeball_1_7
   - first:
-      213: 1548783476536849085
-    second: Spider_3_8
+      213: 5473515689786643627
+    second: Eyeball_1_8
   - first:
-      213: 5949913115513101970
-    second: Spider_3_9
+      213: -40193974065530245
+    second: Eyeball_1_9
   - first:
-      213: -1856856354961020880
-    second: Spider_3_10
+      213: -4987985130660024924
+    second: Eyeball_1_10
   - first:
-      213: -3120269375355849505
-    second: Spider_3_11
+      213: -4990787108825937067
+    second: Eyeball_1_11
   externalObjects: {}
   serializedVersion: 11
   mipmaps:
@@ -151,7 +151,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Spider_3_0
+      name: Eyeball_1_0
       rect:
         serializedVersion: 2
         x: 0
@@ -165,14 +165,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: cd7539e471d19da80800000000000000
-      internalID: -8441684040589551652
+      spriteID: c70671102e0449150800000000000000
+      internalID: 5878394753050435708
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Spider_3_1
+      name: Eyeball_1_1
       rect:
         serializedVersion: 2
         x: 16
@@ -186,14 +186,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 81875c3c18f26c3a0800000000000000
-      internalID: -6645571965756803048
+      spriteID: 6288527d44269cc30800000000000000
+      internalID: 4380140160401377318
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Spider_3_2
+      name: Eyeball_1_2
       rect:
         serializedVersion: 2
         x: 32
@@ -207,14 +207,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: ac44021e29899c700800000000000000
-      internalID: 561147385193972938
+      spriteID: 9fbed55d20a016bb0800000000000000
+      internalID: -4944659908590179335
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Spider_3_3
+      name: Eyeball_1_3
       rect:
         serializedVersion: 2
         x: 0
@@ -228,14 +228,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 1463a1361cdfed260800000000000000
-      internalID: 7124410667579881025
+      spriteID: 0740273ca177e2680800000000000000
+      internalID: -8777947666866633616
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Spider_3_4
+      name: Eyeball_1_4
       rect:
         serializedVersion: 2
         x: 16
@@ -249,14 +249,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: ff9bcc7ca18210740800000000000000
-      internalID: 5116414747155937791
+      spriteID: 114c1e2a6c07c3640800000000000000
+      internalID: 5061044079696135185
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Spider_3_5
+      name: Eyeball_1_5
       rect:
         serializedVersion: 2
         x: 32
@@ -270,14 +270,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 67af4ead7a9a99630800000000000000
-      internalID: 3934362287881910902
+      spriteID: e4e94d883f4cb1e40800000000000000
+      internalID: 5628308709581299278
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Spider_3_6
+      name: Eyeball_1_6
       rect:
         serializedVersion: 2
         x: 0
@@ -291,14 +291,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 2a24d005cbe2cb150800000000000000
-      internalID: 5889633799025541794
+      spriteID: 87c38598203e5c6f0800000000000000
+      internalID: -664875769933579144
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Spider_3_7
+      name: Eyeball_1_7
       rect:
         serializedVersion: 2
         x: 16
@@ -312,14 +312,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 5612c328f6f7111a0800000000000000
-      internalID: -6840546242095996571
+      spriteID: 946c3b7db73ce6240800000000000000
+      internalID: 4786978390608692809
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Spider_3_8
+      name: Eyeball_1_8
       rect:
         serializedVersion: 2
         x: 32
@@ -333,14 +333,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: db239f8bd526e7510800000000000000
-      internalID: 1548783476536849085
+      spriteID: ba4924a1585d5fb40800000000000000
+      internalID: 5473515689786643627
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Spider_3_9
+      name: Eyeball_1_9
       rect:
         serializedVersion: 2
         x: 0
@@ -354,14 +354,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 29e989e5476529250800000000000000
-      internalID: 5949913115513101970
+      spriteID: b7a76b52bc3317ff0800000000000000
+      internalID: -40193974065530245
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Spider_3_10
+      name: Eyeball_1_10
       rect:
         serializedVersion: 2
         x: 16
@@ -375,14 +375,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 0382f93bbfe1b36e0800000000000000
-      internalID: -1856856354961020880
+      spriteID: 4ad241e73fd17cab0800000000000000
+      internalID: -4987985130660024924
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Spider_3_11
+      name: Eyeball_1_11
       rect:
         serializedVersion: 2
         x: 32
@@ -396,8 +396,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: fd47266f88392b4d0800000000000000
-      internalID: -3120269375355849505
+      spriteID: 55bc4dc11992dbab0800000000000000
+      internalID: -4990787108825937067
       vertices: []
       indices: 
       edges: []

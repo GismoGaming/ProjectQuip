@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using Random = UnityEngine.Random;
 using UnityEngine.SceneManagement;
+using System.Net.NetworkInformation;
+using System.Net;
+using System.Net.Sockets;
 
 namespace Gismo
 {
@@ -132,6 +135,46 @@ namespace Gismo
     }
     public class StaticFunctions
     {
+        public static IPAddress GetIPAddress()
+        {
+            NetworkInterface[] interfaces = NetworkInterface.GetAllNetworkInterfaces();
+
+            foreach (NetworkInterface adapter in interfaces)
+            {
+                if (adapter.IsReceiveOnly) continue;
+                if (adapter.OperationalStatus != OperationalStatus.Up) continue;
+                if (adapter.GetIPProperties().DnsSuffix.ToLower().Equals("default") || adapter.GetIPProperties().DnsSuffix.ToLower().Equals("home"))
+                {
+                    foreach (UnicastIPAddressInformation ip in adapter.GetIPProperties().UnicastAddresses)
+                    {
+                        if (ip.Address.AddressFamily == AddressFamily.InterNetwork)
+                        {
+                            return ip.Address;
+                        }
+                    }
+                    break;
+                }
+            }
+            try
+            {
+                using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+                {
+                    socket.Connect("8.8.8.8", 65530);
+                    IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
+                    return endPoint.Address;
+                }
+            }
+            catch
+            {
+                return new IPAddress(new byte[] { 127, 0, 0, 1 });
+            }
+        }
+
+        public static string GetLocalIPAddress()
+        {
+            return GetIPAddress().ToString();
+        }
+
 #if UNITY_EDITOR
         public static void MoveToMainScene(GameObject go)
         {

@@ -1,6 +1,7 @@
 ﻿using Gismo.Networking.Core;
 using Gismo.Networking.Users;
 using Gismo.Quip.Minerals;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using static DL;
@@ -38,7 +39,7 @@ namespace Gismo.Quip
         public LeanTweenType type;
     }
 
-    public enum ConnectionType { NA, Server, Client};
+    public enum ConnectionType { NA, Server, Client };
     class NetGameController : Singleton<NetGameController>
     {
         private Client client;
@@ -50,7 +51,7 @@ namespace Gismo.Quip
 
         [SerializeField] private GameObject[] playerPrefabs;
 
-        private byte userID = byte.MinValue;
+        private byte userID = byte.MaxValue;
 
         Dictionary<byte, PlayerController> clientPlayerControllerDictionary;
 
@@ -61,7 +62,7 @@ namespace Gismo.Quip
 
         public Event onAssignedID;
 
-        public Event onGameStart; 
+        public Event onGameStart;
 
         [SerializeField] private Transform[] waitingRoomSpawnpoints;
         private int currentWaitingRoomID;
@@ -72,6 +73,8 @@ namespace Gismo.Quip
         private bool newClient;
 
         [SerializeField] private List<string> defaultUsernames;
+
+        const int RETRYCOUNT = 5;
 
         public Transform GetWaitingRoomSpawnpoint()
         {
@@ -116,7 +119,7 @@ namespace Gismo.Quip
             trackedScriptDictionary = new Dictionary<uint, TrackedScript>();
         }
 
-        public Dictionary<byte,PlayerController> GetPlayers()
+        public Dictionary<byte, PlayerController> GetPlayers()
         {
             return clientPlayerControllerDictionary;
         }
@@ -187,7 +190,7 @@ namespace Gismo.Quip
 
             return trackedScriptDictionary.ContainsKey(ID);
         }
-        
+
         public TrackedScript GetTrackedScript(uint ID)
         {
             if (trackedScriptDictionary.ContainsKey(ID))
@@ -219,28 +222,28 @@ namespace Gismo.Quip
         {
             return (uint)trackedScriptDictionary.Count;
         }
-#endregion
+        #endregion
 
         void RegisterClientPacketHandlers()
         {
             Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.FirstConnect, Client_FirstConnect_Recieved);
 
-            Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.ClientPositionShare,Client_ClientPositionShare_Recieved);
+            Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.ClientPositionShare, Client_ClientPositionShare_Recieved);
             Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.ClientAttack, Client_ClientAttack_Recieved);
             Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.RoleChange, Client_RoleChange_Recieved);
 
-            Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.PlayerDictionaryShare,Client_PlayerDictionaryShare_Recieved);
-            Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.PlayerHurt,Client_PlayerHurt_Recieved);
+            Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.PlayerDictionaryShare, Client_PlayerDictionaryShare_Recieved);
+            Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.PlayerHurt, Client_PlayerHurt_Recieved);
             Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.GroupTPRequest, Client_GroupTPRequest_Recieved);
 
-            Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.MineralSpawn,Client_MineralSpawn_Recieved);
+            Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.MineralSpawn, Client_MineralSpawn_Recieved);
             Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.MineralDepositInit, Client_MineralDepositInit_Recieved);
             Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.MineralNodeFound, Client_MineralNodeFound_Recieved);
             Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.MineralStateChange, Client_MineralStateChange_Recieved);
-            Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.MineralCollected,Client_MineralCollected_Recieved);
-            
+            Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.MineralCollected, Client_MineralCollected_Recieved);
+
             Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.SpecialAbiltyPlace, Client_SpecialAbiltyPlace_Recieved);
-            
+
             Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.CompressedSpawn, Client_CompressedSpawn_Recieved);
             Networking.NetworkPackets.ClientFunctions.Add(Networking.NetworkPackets.ServerSentPackets.CompressedMineralStateChange, Client_CompressedMineralStateChange_Recieved);
 
@@ -252,52 +255,36 @@ namespace Gismo.Quip
 
         void RegisterServerPacketHandlers()
         {
-            Server.onClientConnected += (byte newID) => 
+            Server.onClientConnected += (byte newID) =>
             {
-                    // Need to create the copy locally
-                    clientPlayerControllerDictionary.Add(newID, SpawnStartingGameObjects(newID, GetWaitingRoomSpawnpoint().position));
+                // Need to create the copy locally
+                clientPlayerControllerDictionary.Add(newID, SpawnStartingGameObjects(newID, GetWaitingRoomSpawnpoint().position));
 
-                    Packet newClientInfo = new Packet(Networking.NetworkPackets.ServerSentPackets.FirstConnect);
-                    newClientInfo.WriteByte(newID);
+                Packet newClientInfo = new Packet(Networking.NetworkPackets.ServerSentPackets.FirstConnect);
+                newClientInfo.WriteByte(newID);
 
-                    List<PlayerDictionaryElement> playerDetails = new List<PlayerDictionaryElement>();
-                    foreach (KeyValuePair<byte, PlayerController> i in clientPlayerControllerDictionary)
+                SendDataTo_S(newClientInfo, newID);
+
+                // Send new player their ID alongside a player dictionary currently in use
+
+                Log($"New player with ID of {newID} joined");
+
+                // Update client's local copies
+                SendDataToAll_S(GetClientArrayPacket());
+
+                foreach (TrackedScript script in trackedScriptDictionary.Values)
+                {
+                    //Log($"Tracked Script OnNewClient Status: GO Name, {script.gameObject.name} and Status: {script != null}",Dev.DebugLogType.blue);
+
+                    if (!script.OnNewClient().Equals(Networking.NetworkStatics.EMPTY))
                     {
-                        PlayerDictionaryElement newPos = new PlayerDictionaryElement
-                        {
-                            id = i.Key,
-                            position = new SerializableVector2(i.Value.transform.position.ToVector2()),
-                            username = i.Value.GetUserName(),
-                            role = (int)i.Value.GetRole()
-                        };
-
-                        playerDetails.Add(newPos);
+                        SendDataTo_S(script.OnNewClient(), newID);
                     }
-
-                    newClientInfo.WriteList(playerDetails);
-
-                    SendDataTo_S(newClientInfo, newID);
-
-                    // Send new player their ID alongside a player dictionary currently in use
-
-                    Log($"New player with ID of {newID} joined");
-
-                    // Update client's local copies
-                    SendDataToAllBut_S(GetClientArrayPacket(),newID);
-
-                    foreach (TrackedScript script in trackedScriptDictionary.Values)
+                    else
                     {
-                        //Log($"Tracked Script OnNewClient Status: GO Name, {script.gameObject.name} and Status: {script != null}",Dev.DebugLogType.blue);
-
-                        if (!script.OnNewClient().Equals(Networking.NetworkStatics.EMPTY))
-                        {
-                            SendDataTo_S(script.OnNewClient(), newID);
-                        }
-                        else
-                        {
-                            //Log($"{script.gameObject.name} has no OnNewClient, this isn't an issue, but it might be", Dev.DebugLogType.italics);
-                        }
+                        //Log($"{script.gameObject.name} has no OnNewClient, this isn't an issue, but it might be", Dev.DebugLogType.italics);
                     }
+                }
             };
 
             Networking.NetworkPackets.ServerFunctions.Add(Networking.NetworkPackets.ClientSentPackets.ClientPosition, Server_ClientPositionPacketRecieved);
@@ -309,7 +296,7 @@ namespace Gismo.Quip
             Networking.NetworkPackets.ServerFunctions.Add(Networking.NetworkPackets.ClientSentPackets.MineralStateChange, Server_MineralStateChange_Recieved);
             Networking.NetworkPackets.ServerFunctions.Add(Networking.NetworkPackets.ClientSentPackets.MineralMineBegin, Server_ClientMineralMineBeginRecived);
             Networking.NetworkPackets.ServerFunctions.Add(Networking.NetworkPackets.ClientSentPackets.MineralCollected, Server_MineralCollected_Recieved);
-            
+
             Networking.NetworkPackets.ServerFunctions.Add(Networking.NetworkPackets.ClientSentPackets.SpecialAbiltyPlace, Server_SpecialAbiltyPlace_Recieved);
 
             Networking.NetworkPackets.ServerFunctions.Add(Networking.NetworkPackets.ClientSentPackets.CompressedSpawn, Server_CompressedSpawn_Recieved);
@@ -317,11 +304,11 @@ namespace Gismo.Quip
         }
 
         #region Server Handles
-        void Server_PlayerInformationSendRecieved(Packet packet,byte id)
+        void Server_PlayerInformationSendRecieved(Packet packet, byte id)
         {
             clientPlayerControllerDictionary[id].SetUserName(packet.ReadString());
         }
-       
+
         void Server_ClientPositionPacketRecieved(Packet packet, byte id)
         {
             Packet otherClientsPacket = new Packet(Networking.NetworkPackets.ServerSentPackets.ClientPositionShare);
@@ -343,8 +330,8 @@ namespace Gismo.Quip
         {
             ((MineralDeposit)GetTrackedScript(packet.ReadUint())).StartDepositOutput();
         }
-        
-        void Server_MineralCollected_Recieved(Packet packet,byte id)
+
+        void Server_MineralCollected_Recieved(Packet packet, byte id)
         {
             Packet clientPacket = new Packet(Networking.NetworkPackets.ServerSentPackets.MineralCollected);
 
@@ -359,11 +346,11 @@ namespace Gismo.Quip
 
             foreach (MineralCostDetails costDetail in costDetails)
             {
-                CollectMineral(costDetail,id);
+                CollectMineral(costDetail, id);
             }
         }
 
-        void Server_RoleChange_Recieved(Packet packet,byte id)
+        void Server_RoleChange_Recieved(Packet packet, byte id)
         {
             int role = packet.ReadInt();
 
@@ -387,7 +374,7 @@ namespace Gismo.Quip
         void Server_SpecialAbiltyPlace_Recieved(Packet packet, byte id)
         {
             Packet toOthers = new Packet(Networking.NetworkPackets.ServerSentPackets.SpecialAbiltyPlace);
-            packet.CopyTo(toOthers,true);
+            packet.CopyTo(toOthers, true);
 
             PlaceDownNewRoleSpecificItem(packet.ReadUint(), packet.ReadVector2(), (Role)packet.ReadInt());
 
@@ -432,14 +419,14 @@ namespace Gismo.Quip
 
         void Client_FirstConnect_Recieved(Packet packet)
         {
+            Log($"Got first connect packet");
             byte id = packet.ReadByte();
 
             client.clientID = id;
-            Client.onClientConnected?.Invoke(id);
 
             Log($"I have gotten an id of: {id}");
 
-            Client_PlayerDictionaryShare_Recieved(packet);
+            Client.onClientConnected?.Invoke(id);
         }
 
         void Client_EnemySpawn_Recieved(Packet packet)
@@ -543,7 +530,7 @@ namespace Gismo.Quip
                 clientPlayerControllerDictionary[p.id].UpdateRole((Role)p.role);
             }
 
-            if(newClient)
+            if (newClient)
             {
                 onAssignedID?.Invoke();
                 newClient = false;
@@ -553,7 +540,7 @@ namespace Gismo.Quip
         void Client_MineralCollected_Recieved(Packet packet)
         {
             byte playerID = packet.ReadByte();
-            foreach(uint i in packet.ReadList<uint>())
+            foreach (uint i in packet.ReadList<uint>())
             {
                 Destroy(GetTrackedScript(i).gameObject);
             }
@@ -586,7 +573,7 @@ namespace Gismo.Quip
             Vector2 pos = packet.ReadVector2();
             Log($"{pos}");
 
-            ((RoleSpecific.HaulerContainmentCube)GetTrackedScript(spawnerID)).SpawnNewCubeWithID(details, pos,itemID);
+            ((RoleSpecific.HaulerContainmentCube)GetTrackedScript(spawnerID)).SpawnNewCubeWithID(details, pos, itemID);
         }
 
         void Client_EnemyMove_Recieved(Packet packet)
@@ -664,7 +651,7 @@ namespace Gismo.Quip
         void PlaceDownNewRoleSpecificItem(uint ID, Vector2 position, Role role)
         {
             GameObject newObject = Instantiate(PlayerCentralization.Instance.roleSpecialsTable[role].prefab, position, Quaternion.identity);
-            newObject.GetComponent<TrackedGameObject>().GlobalPlace(ID,position);
+            newObject.GetComponent<TrackedGameObject>().GlobalPlace(ID, position);
         }
 
         public void CollectMineral(MineralCostDetails costDetails, byte collectingPlayerID)
@@ -677,7 +664,7 @@ namespace Gismo.Quip
             Notification.PushNotification($"{collectingUsername} has collected a {costDetails.name} for {costDetails.price} coins");
         }
 
-        public void SetUserRole(byte userID,Role newRole)
+        public void SetUserRole(byte userID, Role newRole)
         {
 #if UNITY_EDITOR
             GetLocalPlayer().UpdateRole(newRole);
@@ -768,7 +755,14 @@ namespace Gismo.Quip
         #endregion
 
         #region Client
-        public void StartClient(string ip = "localHost")
+        public void StartClient(string ip = "localhost")
+        {
+            DoClientConnect(ip);
+
+            StartCoroutine(ConnectCheck(ip));
+        }
+
+        void DoClientConnect(string ip)
         {
             ClearDictionaries();
             Log($"Connecting to {ip}");
@@ -778,7 +772,9 @@ namespace Gismo.Quip
 
             RegisterClientPacketHandlers();
 
-            Client.onClientConnected += (byte i) => { 
+            Client.onClientConnected += (byte i) =>
+            {
+                Log($"Gott id {i}");
                 userID = i;
                 newClient = true;
             };
@@ -786,21 +782,37 @@ namespace Gismo.Quip
             client.Connect(ip);
 
             onControllerIsReady?.Invoke();
-            Log("Connected as Client");
+        }
+
+        IEnumerator ConnectCheck(string ip)
+        {
+            int retries = 0;
+            yield return new WaitForSeconds(1f);
+            while (retries < RETRYCOUNT)
+            {
+                if (IsConnected() && userID != byte.MaxValue)
+                    break;
+
+                DoClientConnect(ip);
+                yield return new WaitForSecondsRealtime(1f);
+                Disconnect();
+                retries++;
+            }
+            Log($"Connected status -> {IsConnected()}");
         }
 
         public void SendData_C(Packet packet)
         {
-            if(IsConnectedAs(ConnectionType.Client))
+            if (IsConnectedAs(ConnectionType.Client))
             {
 #if !UNITY_EDITOR
                 client.SendData(packet);
 #endif
             }
         }
-#endregion
+        #endregion
 
-#region Server
+        #region Server
         public void StartServer()
         {
             ClearDictionaries();
@@ -814,23 +826,27 @@ namespace Gismo.Quip
             {
                 userID = newID;
                 // Need to create the copy locally
-                clientPlayerControllerDictionary.Add(newID, SpawnStartingGameObjects(newID,GetWaitingRoomSpawnpoint().position));
+                clientPlayerControllerDictionary.Add(newID, SpawnStartingGameObjects(newID, GetWaitingRoomSpawnpoint().position));
             };
+            Server.onClientDisconnect += (byte id) =>
+            {
+                if(clientPlayerControllerDictionary.ContainsKey(id))
+                {
+                    clientPlayerControllerDictionary[id].gameObject.transform.position = Vector3.one * 500f;
+                    clientPlayerControllerDictionary[id].gameObject.SetActive(false);
 
+                    clientPlayerControllerDictionary.Remove(id);
+                }
+            };
             server.StartListening();
             onControllerIsReady?.Invoke();
             onAssignedID?.Invoke();
             Log("Connected as Server");
         }
 
-        public string GetIps()
-        {
-            return server.GetIPv4();
-        }
-
         public void SendDataToAll_S(Packet packet)
         {
-            if(IsConnectedAs(ConnectionType.Server))
+            if (IsConnectedAs(ConnectionType.Server))
             {
 #if !UNITY_EDITOR
                 server.SendDataToAll(packet);
@@ -857,6 +873,6 @@ namespace Gismo.Quip
 #endif
             }
         }
-#endregion
+        #endregion
     }
 }

@@ -13,7 +13,7 @@ namespace Gismo.Quip.Cards
 
         [SerializeField] private TMPro.TextMeshProUGUI contextMessage;
 
-        private PlayerController localPlayer;
+        [SerializeField]  private PlayerController localPlayer;
 
         [SerializeField] private float playerInteractionRange;
 

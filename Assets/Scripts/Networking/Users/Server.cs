@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
 using static DL;
@@ -24,6 +25,8 @@ namespace Gismo.Networking.Users
         public static ClientFunction onServerUp;
         public static ClientFunction onClientConnected;
 
+        public static ClientFunction onClientDisconnect;
+
         public Server(int clientLimit = 0)
         {
             NetworkPackets.InitalizeFunctions();
@@ -42,7 +45,8 @@ namespace Gismo.Networking.Users
                 return;
             }
             listenerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            listenerSocket.Bind(new IPEndPoint(IPAddress.Any, NetworkStatics.portNumberTCP));
+
+            listenerSocket.Bind(new IPEndPoint(StaticFunctions.GetIPAddress(), NetworkStatics.portNumberTCP));
             serverListening = true;
             listenerSocket.Listen(NetworkStatics.maxServerConnections);
             listenerSocket.BeginAccept(new AsyncCallback(DoAcceptClient), byte.MinValue);
@@ -50,6 +54,7 @@ namespace Gismo.Networking.Users
             onServerUp?.Invoke(NetworkStatics.ServerID);
 
             Log($"Started Server on port {NetworkStatics.portNumberTCP}, with max connections {NetworkStatics.maxServerConnections}");
+            Log($"Try connecting to {StaticFunctions.GetLocalIPAddress()}");
         }
 
         public void StopListening()
@@ -85,6 +90,7 @@ namespace Gismo.Networking.Users
                 socket.Dispose();
                 socket = null;
             }
+
             socketLookupTable.Add(emptySlot, socket);
             socketLookupTable[emptySlot].ReceiveBufferSize = NetworkStatics.bufferSize;
             socketLookupTable[emptySlot].SendBufferSize = NetworkStatics.bufferSize;
@@ -273,16 +279,6 @@ namespace Gismo.Networking.Users
             return false;
         }
 
-        public string GetIPv4()
-        {
-            foreach(IPAddress ip in Dns.GetHostEntry(Dns.GetHostName()).AddressList)
-            {
-                if (ip.AddressFamily == AddressFamily.InterNetwork)
-                    return ip.ToString();
-            }
-            return null;
-        }
-
         public string ClientIp(byte index)
         {
             if (IsPlayerIndexConnected(index))
@@ -306,6 +302,9 @@ namespace Gismo.Networking.Users
 
                 return;
             }
+
+            onClientDisconnect?.Invoke(playerIndex);
+
             socketLookupTable[playerIndex].BeginDisconnect(false, new AsyncCallback(DoDisconnect), playerIndex);
         }
 

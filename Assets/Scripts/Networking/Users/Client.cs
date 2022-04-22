@@ -46,6 +46,9 @@ namespace Gismo.Networking.Users
                 Log("Connection initalizeation has failed");
                 return;
             }
+            ip = ip.Trim();
+
+            Log($"{ip} | {ip.Length}", Dev.DebugLogType.italics);
 
             if (ip.ToLower() == "localhost")
             {
@@ -68,7 +71,7 @@ namespace Gismo.Networking.Users
             }
             catch
             {
-                Log("Do Connect in Client Faililed");
+                Log("Do Connect in Client Failed");
                 return;
             }
 

@@ -64,11 +64,14 @@ namespace Gismo.Networking
     public class NetworkPackets
     {
         // Sent to the server from clients
-        public enum ClientSentPackets { MSGSend, RoleChange, ClientAttack, CompressedSpawn, ClientPosition, DepositLoseMineral, MineralStateChange, MineralMineBegin, MineralCollected, PlayerInformationSend, SpecialAbiltyPlace,
+        public enum ClientSentPackets {
+            MSGSend, RoleChange, ClientAttack, CompressedSpawn, ClientPosition, DepositLoseMineral, MineralStateChange, MineralMineBegin, MineralCollected, PlayerInformationSend, SpecialAbiltyPlace,
             CompressedMineralStateChange
         }
         // Sent to a specific client from the server
-        public enum ServerSentPackets { FirstConnect , ClientAttack, RoleChange, CompressedSpawn, MSGSend, PlayerTPRequest, GroupTPRequest,ClientPositionShare, PlayerDictionaryShare, MineralDepositInit, MineralSpawn, MineralStateChange, MineralCollected, SpecialAbiltyPlace,
+        public enum ServerSentPackets
+        {
+            FirstConnect, ClientAttack, RoleChange, CompressedSpawn, MSGSend, PlayerTPRequest, GroupTPRequest, ClientPositionShare, PlayerDictionaryShare, MineralDepositInit, MineralSpawn, MineralStateChange, MineralCollected, SpecialAbiltyPlace,
             CompressedMineralStateChange,
             MineralNodeFound,
             EnemyMove,
